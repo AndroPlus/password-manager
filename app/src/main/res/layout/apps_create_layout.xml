@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="8dp"
+    tools:context="com.androplus.pwdmgr.fragment.HomeFragment">
+
+    <RelativeLayout
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:id="@+id/source_app_input"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <EditText
+            android:id="@+id/source_app"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:hint="Website or App Name"
+
+            />
+
+    </RelativeLayout>
+
+
+<LinearLayout
+    android:orientation="vertical"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:id="@+id/containerLayout"
+    app:layout_constraintTop_toBottomOf="@id/source_app_input"
+    >
+
+</LinearLayout>
+
+    <Button
+        android:id="@+id/addMoreApp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Field"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/containerLayout"
+        />
+
+
+    <Button
+        android:id="@+id/saveApp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Save"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/addMoreApp" />
+</androidx.constraintlayout.widget.ConstraintLayout>

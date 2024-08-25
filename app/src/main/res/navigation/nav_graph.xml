@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/LoginFragment">
+
+    <fragment
+        android:id="@+id/LoginFragment"
+        android:name="com.androplus.pwdmgr.fragment.LoginFragment"
+        android:label="@string/second_fragment_label"
+        tools:layout="@layout/login_layout">
+
+        <action
+            android:id="@+id/action_login_home"
+            app:destination="@id/HomeFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/HomeFragment"
+        android:name="com.androplus.pwdmgr.fragment.AppListFragment"
+        android:label="@string/first_fragment_label"
+        tools:layout="@layout/apps_list">
+
+
+        <action
+            android:id="@+id/action_app_add"
+            app:destination="@id/AppAddFragment" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/AppAddFragment"
+        android:name="com.androplus.pwdmgr.fragment.AppCreateFragment"
+        tools:layout="@layout/apps_create_layout">
+
+    </fragment>
+
+</navigation>

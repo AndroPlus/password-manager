@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    android:padding="8dp"
+    tools:context="com.androplus.pwdmgr.fragment.HomeFragment">
+
+    <TextView
+        android:textSize="32sp"
+        android:layout_marginTop="16dp"
+        android:id="@+id/textview_first"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/password_manager_title"
+        app:layout_constraintBottom_toTopOf="@id/source_app_input"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/source_app_input"
+        style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox.ExposedDropdownMenu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textview_first">
+
+        <AutoCompleteTextView
+            android:id="@+id/source_app"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text=""
+            android:hint="Website or App Name"/>
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <!--<EditText
+        android:id="@+id/source_app"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Website or App Name"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textview_first" />-->
+
+<!--    <RelativeLayout-->
+<!--        android:id="@+id/layout_app_login_id"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/source_app_input"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content">-->
+
+<!--        <FrameLayout-->
+<!--            android:layout_alignParentLeft="true"-->
+<!--            android:layout_alignParentTop="true"-->
+<!--            android:id="@+id/inputArea"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_centerInParent="true"-->
+<!--            android:layout_toLeftOf="@+id/app_login_id_copy"-->
+<!--            android:layout_height="wrap_content">-->
+
+<!--            <EditText-->
+<!--                android:id="@+id/source_app_login_id"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_marginTop="16dp"-->
+<!--                android:hint="Login ID / Email"-->
+<!--                android:inputType="textPassword"/>-->
+
+<!--            <ImageView-->
+<!--                android:id="@+id/show_app_id_btn"-->
+<!--                android:layout_width="40dp"-->
+
+<!--                android:layout_height="40dp"-->
+<!--                android:layout_marginRight="5dp"-->
+<!--                android:alpha=".5"-->
+<!--                android:layout_gravity="right|center"-->
+<!--                android:padding="5dp"-->
+<!--                android:src="@drawable/ic_custom_show"-->
+<!--                android:layout_marginEnd="5dp" />-->
+
+<!--        </FrameLayout>-->
+
+<!--        <Button-->
+<!--            android:layout_centerInParent="true"-->
+<!--            android:layout_alignParentRight="true"-->
+<!--            android:id="@+id/app_login_id_copy"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Copy" />-->
+
+<!--    </RelativeLayout>-->
+
+
+<!--    <RelativeLayout-->
+<!--        android:id="@+id/layout_app_login_password"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/layout_app_login_id"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content">-->
+
+<!--        <FrameLayout-->
+<!--            android:layout_alignParentLeft="true"-->
+<!--            android:layout_alignParentTop="true"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_centerInParent="true"-->
+<!--            android:layout_toLeftOf="@+id/app_login_password_copy"-->
+<!--            android:layout_height="wrap_content">-->
+
+<!--            <EditText-->
+<!--                android:id="@+id/source_app_password"-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:layout_marginTop="16dp"-->
+<!--                android:hint="Password"-->
+<!--                android:inputType="textPassword"/>-->
+
+<!--            <ImageView-->
+<!--                android:id="@+id/show_app_pass_btn"-->
+<!--                android:layout_width="40dp"-->
+<!--                android:layout_height="40dp"-->
+<!--                android:layout_marginRight="5dp"-->
+<!--                android:alpha=".5"-->
+<!--                android:layout_gravity="right|center"-->
+<!--                android:padding="5dp"-->
+<!--                android:src="@drawable/ic_custom_show"-->
+<!--                android:layout_marginEnd="5dp" />-->
+
+<!--        </FrameLayout>-->
+
+<!--        <Button-->
+<!--            android:layout_centerInParent="true"-->
+<!--            android:layout_alignParentRight="true"-->
+<!--            android:id="@+id/app_login_password_copy"-->
+<!--            android:layout_width="wrap_content"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:text="Copy" />-->
+
+<!--    </RelativeLayout>-->
+
+
+<!--    <Button-->
+<!--        android:id="@+id/save_bt"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="@string/save_pwd"-->
+<!--        app:layout_constraintBottom_toBottomOf="parent"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toBottomOf="@id/layout_app_login_password" />-->
+</androidx.constraintlayout.widget.ConstraintLayout>

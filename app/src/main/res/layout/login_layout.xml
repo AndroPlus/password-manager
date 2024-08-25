@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top"
+    android:padding="8dp"
+    tools:context="com.androplus.pwdmgr.fragment.LoginFragment">
+
+    <TextView
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/firstLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:text="Pin:" />
+
+    <com.chaos.view.PinView
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/firstLabel"
+            android:id="@+id/firstPinView"
+            style="@style/PinWidget.PinView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:cursorVisible="true"
+            android:hint="0000"
+            android:inputType="number"
+            android:padding="@dimen/common_padding"
+            android:textColor="@color/text_colors"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            app:cursorColor="@color/line_selected"
+            app:cursorWidth="2dp"
+            app:hideLineWhenFilled="false"
+            app:itemCount="5"
+            app:itemHeight="48dp"
+            app:itemRadius="4dp"
+            app:itemSpacing="0dp"
+            app:itemWidth="48dp"
+            app:lineColor="@color/line_colors"
+            app:lineWidth="2dp"
+            app:viewType="rectangle">
+        <requestFocus />
+    </com.chaos.view.PinView>
+
+    <TextView
+        app:layout_constraintTop_toBottomOf="@id/firstPinView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/confirmPinLbl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:text="Confirm Pin:" />
+
+    <com.chaos.view.PinView
+        android:layout_marginTop="5dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/confirmPinLbl"
+        android:id="@+id/confirmPin"
+        style="@style/PinWidget.PinView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:cursorVisible="true"
+        android:hint="0000"
+        android:inputType="numberPassword"
+        android:padding="@dimen/common_padding"
+        android:textColor="@color/text_colors"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        app:cursorColor="@color/line_selected"
+        app:cursorWidth="2dp"
+        app:hideLineWhenFilled="false"
+        app:itemCount="5"
+        app:itemHeight="48dp"
+        app:itemRadius="4dp"
+        app:itemSpacing="0dp"
+        app:itemWidth="48dp"
+        app:lineColor="@color/line_colors"
+        app:lineWidth="2dp"
+        app:viewType="rectangle">
+    </com.chaos.view.PinView>
+    </androidx.constraintlayout.widget.ConstraintLayout>

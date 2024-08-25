@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Password Manager</string>
+    <string name="action_settings">Settings</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">App List</string>
+    <string name="second_fragment_label">Password Manager</string>
+    <string name="save_pwd">Save</string>
+    <string name="login_bt">Login</string>
+    <string name="previous">Previous</string>
+
+    <string name="password_manager_title">Password Manager</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+</resources>
