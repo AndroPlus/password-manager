@@ -11,6 +11,7 @@ import android.widget.ImageView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
+import com.androplus.pwdmgr.MainActivity
 import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.databinding.AppsCreateLayoutBinding
 import com.androplus.pwdmgr.model.AppField
@@ -51,31 +52,36 @@ class AppCreateFragment : Fragment(), View.OnClickListener {
        var isEdit : Boolean = false
           val inflater = LayoutInflater.from(context)
 
-       val userApplicationArray =  RealmService.getInstance().getAllUserApplications(arguments?.getString("appName"))
+        if((activity as MainActivity)._userApp !=null) {
+            val userApplicationArray =  RealmService.getInstance().getAllUserApplications((activity as MainActivity)._userApp)
 
-        if(userApplicationArray.size > 0) {
-            isEdit = true
-            selectApplication = userApplicationArray[0]
-            binding.sourceApp.setText(selectApplication!!.app_name)
+            if(userApplicationArray.size > 0) {
+                isEdit = true
+                selectApplication = userApplicationArray[0]
+                binding.sourceApp.setText(selectApplication!!.app_name)
 
-            val appFieldsString = selectApplication!!.app_fields_json_array
-            val jsonParser = JsonParser()
-            jsonParser.parse(appFieldsString).asJsonArray.forEachIndexed { index, jsonElement ->
-                val gson = Gson()
-                val jsonObject = jsonElement.asString
-                val appField = gson.fromJson(jsonObject, AppField::class.java)
-                val dynamicLayout = inflater.inflate(R.layout.dynamic_layout, container, false)
-                dynamicLayout.findViewById<EditText>(R.id.source_app_login_id).setText(EncryptDecrypt.getInstance().decryptNew(appField!!.app_login_id, selectApplication!!.app_name))
-                dynamicLayout.findViewById<EditText>(R.id.source_app_password).setText(EncryptDecrypt.getInstance().decryptNew(appField!!.app_password, selectApplication!!.app_name))
-                binding.containerLayout?.addView(dynamicLayout)
-                dynamicLayouts.add(dynamicLayout)
-                dynamicLayout.findViewById<ImageView>(R.id.show_app_pass_btn).setOnClickListener(this)
-                dynamicLayout.findViewById<ImageView>(R.id.show_app_pass_btn).tag = dynamicLayout
-                dynamicLayout.findViewById<ImageView>(R.id.show_app_id_btn).setOnClickListener(this)
-                dynamicLayout.findViewById<ImageView>(R.id.show_app_id_btn).tag = dynamicLayout
-                dynamicLayout.findViewById<ImageView>(R.id.app_field_delete).setOnClickListener(this)
-                dynamicLayout.findViewById<ImageView>(R.id.app_field_delete).tag = index
+                val appFieldsString = selectApplication!!.app_fields_json_array
+                val jsonParser = JsonParser()
+                jsonParser.parse(appFieldsString).asJsonArray.forEachIndexed { index, jsonElement ->
+                    val gson = Gson()
+                    val jsonObject = jsonElement.asString
+                    val appField = gson.fromJson(jsonObject, AppField::class.java)
+                    val dynamicLayout = inflater.inflate(R.layout.dynamic_layout, container, false)
+                    dynamicLayout.tag = appField;
+                    dynamicLayout.findViewById<EditText>(R.id.source_app_title).setText(appField!!.app_title)
+                    dynamicLayout.findViewById<EditText>(R.id.source_app_login_id).setText(appField!!.app_login_id)
+                    dynamicLayout.findViewById<EditText>(R.id.source_app_password).setText(appField!!.app_password)
+                    binding.containerLayout?.addView(dynamicLayout)
+                    dynamicLayouts.add(dynamicLayout)
+                    dynamicLayout.findViewById<ImageView>(R.id.show_app_pass_btn).setOnClickListener(this)
+                    dynamicLayout.findViewById<ImageView>(R.id.show_app_pass_btn).tag = dynamicLayout
+                    dynamicLayout.findViewById<ImageView>(R.id.show_app_id_btn).setOnClickListener(this)
+                    dynamicLayout.findViewById<ImageView>(R.id.show_app_id_btn).tag = dynamicLayout
+                    dynamicLayout.findViewById<ImageView>(R.id.app_field_delete).setOnClickListener(this)
+                    dynamicLayout.findViewById<ImageView>(R.id.app_field_delete).tag = index
+                }
             }
+
         }
 
         binding.saveApp.setOnClickListener(View.OnClickListener {
@@ -84,9 +90,9 @@ class AppCreateFragment : Fragment(), View.OnClickListener {
             val appFields = JsonArray()
             dynamicLayouts.forEach {   view->
                 var appField = AppField()
-                appField.app_login_id = EncryptDecrypt.getInstance().encryptNew(view.findViewById<EditText>(R.id.source_app_login_id).text.toString().toByteArray(), application!!.app_name)
-                appField.app_password = EncryptDecrypt.getInstance().encryptNew(view.findViewById<EditText>(R.id.source_app_password).text.toString().toByteArray(), application!!.app_name)
-
+                appField.app_login_id = view.findViewById<EditText>(R.id.source_app_login_id).text.toString()
+                appField.app_password = view.findViewById<EditText>(R.id.source_app_password).text.toString()
+                appField.app_title = view.findViewById<EditText>(R.id.source_app_title).text.toString()
                 val gson = Gson()
                 appFields.add(gson.toJson(appField))
             }

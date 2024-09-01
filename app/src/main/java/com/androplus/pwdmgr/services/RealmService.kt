@@ -1,31 +1,41 @@
 package com.androplus.pwdmgr.services
 
+import android.util.Log
+import com.androplus.pwdmgr.MainActivity
 import com.androplus.pwdmgr.model.LoginModel
 import com.androplus.pwdmgr.model.UserApplication
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
-import io.realm.kotlin.delete
 import io.realm.kotlin.ext.query
-import io.realm.kotlin.internal.getRealm
 import io.realm.kotlin.query.RealmResults
+import kotlinx.coroutines.runBlocking
+import java.security.SecureRandom
 
 class RealmService private constructor() {
 
-    private val realm: Realm
+    private lateinit var realm: Realm
+
 
     init {
         val config = RealmConfiguration.Builder(schema = setOf(LoginModel::class, UserApplication::class))
-            .schemaVersion(1)
             .deleteRealmIfMigrationNeeded()
+            .name("pwdDB")
+            .encryptionKey(key!!)
             .build()
 
-        realm = Realm.open(config)
+        try {
+            realm = Realm.open(config)
+            Log.d("RealmInit", "Realm initialized successfully.")
+        } catch (e: Exception) {
+            Log.e("RealmInit", "Error initializing Realm: ${e.message}")
+        }
     }
 
     companion object {
         private var realmService: RealmService? = null
-
-        fun getInstance(): RealmService {
+        var key:ByteArray? = null
+        fun getInstance(key: ByteArray? = null): RealmService {
+            this.key = key
             if (realmService == null) {
                 realmService = RealmService()
             }
@@ -88,9 +98,9 @@ class RealmService private constructor() {
         }
     }
 
-     fun getAllUserApplications(app_name: String?): List<UserApplication> {
-        val realmResults: RealmResults<UserApplication> = if (!app_name.isNullOrEmpty()) {
-            realm.query<UserApplication>("app_name == $0", app_name).find()
+     fun getAllUserApplications(userApp: UserApplication? = UserApplication()): List<UserApplication> {
+        val realmResults: RealmResults<UserApplication> = if (!userApp?.app_name.isNullOrEmpty()) {
+            realm.query<UserApplication>("_id == $0", userApp?._id).find()
         } else {
             realm.query<UserApplication>().find()
         }

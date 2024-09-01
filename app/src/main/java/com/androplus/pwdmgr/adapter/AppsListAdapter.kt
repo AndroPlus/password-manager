@@ -53,7 +53,6 @@ class AppsListAdapter(private val mList: List<UserApplication>,  private val onI
                 onLongItemClick(item)
                 true
             }
-            val imageView = itemView.findViewById<ImageView>(R.id.imageview)
             val textView = itemView.findViewById<TextView>(R.id.textView)
             textView.text = item.app_name
         }

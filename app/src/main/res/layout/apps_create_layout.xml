@@ -7,10 +7,20 @@
     android:padding="8dp"
     tools:context="com.androplus.pwdmgr.fragment.HomeFragment">
 
-    <RelativeLayout
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+    <RelativeLayout
         android:id="@+id/source_app_input"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -29,35 +39,31 @@
 
 <LinearLayout
     android:orientation="vertical"
-    app:layout_constraintEnd_toEndOf="parent"
-    app:layout_constraintStart_toStartOf="parent"
     android:layout_width="wrap_content"
     android:layout_height="match_parent"
     android:id="@+id/containerLayout"
-    app:layout_constraintTop_toBottomOf="@id/source_app_input"
     >
 
 </LinearLayout>
 
-    <Button
-        android:id="@+id/addMoreApp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Add Field"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/containerLayout"
-        />
+            <Button
+                android:id="@+id/addMoreApp"
+                android:layout_width="wrap_content"
+                android:layout_gravity="center"
+                android:layout_height="wrap_content"
+                android:text="Add Field"
+                />
 
 
-    <Button
-        android:id="@+id/saveApp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Save"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/addMoreApp" />
+            <Button
+                android:layout_gravity="center"
+                android:id="@+id/saveApp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Save" />
+</LinearLayout>
+
+    </ScrollView>
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -49,15 +49,7 @@ class HomeFragment : Fragment() {
 
     @RequiresApi(Build.VERSION_CODES.KITKAT)
     fun setUI() {
-            results  = RealmService.getInstance().getAllUserApplications("");
-            userApplicationAdapter = activity?.let { UserApplicationAdapter(it.applicationContext, R.layout.app_name_layout,  results) }
 
-            binding.sourceApp.setAdapter( userApplicationAdapter)
-            binding.sourceApp.setOnItemClickListener { parent, view, position, id ->
-                val masterpass = arguments?.getString("master_pass")
-              //  binding.sourceAppLoginId.setText(EncryptDecrypt.getInstance().decryptNew(results[position].app_login_id, masterpass))
-//binding.sourceAppPassword.setText(EncryptDecrypt.getInstance().decryptNew(results[position].app_password, masterpass))
-            }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

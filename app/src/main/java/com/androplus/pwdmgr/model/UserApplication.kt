@@ -10,7 +10,7 @@ open class UserApplication : RealmObject {
     @PrimaryKey
     var _id: ObjectId = ObjectId()
     @SerializedName("app_name")
-    var app_name: String? = null
+    var app_name: String = ""
     @SerializedName("app_fields_json_array")
     var app_fields_json_array: String? = ""
 }

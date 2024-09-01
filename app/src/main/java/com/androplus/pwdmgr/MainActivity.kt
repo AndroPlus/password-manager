@@ -1,25 +1,27 @@
 package com.androplus.pwdmgr
 
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
+import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
-import android.view.Menu
-import android.view.MenuItem
-import android.view.View
-import androidx.lifecycle.lifecycleScope
 import com.androplus.pwdmgr.databinding.ActivityMainBinding
 import com.androplus.pwdmgr.fragment.AppListFragment
 import com.androplus.pwdmgr.model.UserApplication
 import com.androplus.pwdmgr.services.RealmService
 import kotlinx.coroutines.launch
+import kotlin.random.Random
 
 class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionListener {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+    public var _userApp: UserApplication? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,5 +77,6 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
     interface RefreshAdapterListener {
         fun onRefreshAdapter()
     }
+
 
 }

@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.androplus.pwdmgr.MainActivity
 import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.adapter.AppsListAdapter
 import com.androplus.pwdmgr.databinding.AppsListBinding
@@ -49,7 +50,7 @@ class AppListFragment : Fragment() {
         binding.addApp.setOnClickListener(View.OnClickListener {
             navgiateToAppCreatePage()
         })
-        results  = RealmService.getInstance().getAllUserApplications("");
+        results  = RealmService.getInstance().getAllUserApplications();
         binding.appList.layoutManager = LinearLayoutManager(context)
         _appListAdapter = AppsListAdapter(results, {
             item -> onListItemClick(item)
@@ -69,9 +70,8 @@ class AppListFragment : Fragment() {
     fun navgiateToAppCreatePage(userApplication: UserApplication?=null) {
         // move to home fragment
         val navigate = activity?.findNavController(R.id.nav_host_fragment_content_main)
-
+        (activity as MainActivity)._userApp = userApplication
         val bundle = Bundle()
-        bundle.putString("appName", userApplication?.app_name.toString())
         //bundle.putString("master_pass", binding.appPassword.text.toString())
         //if(navigate?.popBackStack(R.id.LoginFragment, true) == true){
         navigate?.navigate(R.id.action_app_add,bundle)
