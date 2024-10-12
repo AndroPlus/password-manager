@@ -17,6 +17,7 @@ import com.androplus.pwdmgr.databinding.AppsCreateLayoutBinding
 import com.androplus.pwdmgr.model.AppField
 import com.androplus.pwdmgr.model.UserApplication
 import com.androplus.pwdmgr.services.EncryptDecrypt
+import com.androplus.pwdmgr.services.PasswordGenerator
 import com.androplus.pwdmgr.services.RealmService
 import com.google.gson.Gson
 import com.google.gson.JsonArray
@@ -120,6 +121,8 @@ class AppCreateFragment : Fragment(), View.OnClickListener {
             dynamicLayout.findViewById<ImageView>(R.id.show_app_id_btn).tag = dynamicLayout
             dynamicLayout.findViewById<ImageView>(R.id.app_field_delete).setOnClickListener(this)
             dynamicLayout.findViewById<ImageView>(R.id.app_field_delete).tag = dynamicLayouts.size -1
+            dynamicLayout.findViewById<ImageView>(R.id.passwordGen).setOnClickListener(this)
+            dynamicLayout.findViewById<ImageView>(R.id.passwordGen).tag = dynamicLayout
         }
     }
 
@@ -145,6 +148,12 @@ class AppCreateFragment : Fragment(), View.OnClickListener {
             dynamicLayouts.removeAt(p0.tag as Int)
             binding.containerLayout.removeViewAt(p0.tag as Int)
             binding.containerLayout.invalidate()
+        }
+
+        if (p0.id == R.id.passwordGen) {
+            (p0?.tag as View).findViewById<EditText>(R.id.source_app_password).setText(
+                PasswordGenerator.generatePassword()
+            )
         }
     }
 }
