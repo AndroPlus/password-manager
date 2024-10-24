@@ -1,0 +1,12 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <!-- Semi-transparent background for glassy look -->
+            <solid android:color="#80FFFFFF" /> <!-- Transparent white (#80 is 50% opacity) -->
+            <corners android:radius="16dp" /> <!-- Rounded corners -->
+            <padding android:left="10dp" android:top="10dp" android:right="10dp" android:bottom="10dp" />
+            <!-- Border for added sharpness -->
+            <stroke android:width="2dp" android:color="#B3FFFFFF" /> <!-- Light stroke for definition -->
+        </shape>
+    </item>
+</layer-list>

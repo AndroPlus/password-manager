@@ -4,18 +4,43 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_gravity="top"
+    android:layout_gravity="center"
     android:padding="8dp"
     tools:context="com.androplus.pwdmgr.fragment.LoginFragment">
 
+    <TextView app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        android:layout_alignParentTop="true"
+        android:id="@+id/stylish_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Password Manager"
+        android:textSize="24sp"
+        android:textColor="@color/line_selected"
+        android:fontFamily="@font/robot_bold"
+    android:padding="12dp"
+    android:gravity="center"
+    android:background="@drawable/label_background"
+    android:elevation="4dp"
+    android:shadowColor="#80000000"
+    android:shadowDx="2"
+    android:shadowDy="2"
+    android:shadowRadius="4"
+    android:layout_marginTop="20dp"
+    android:layout_marginBottom="20dp"
+    android:layout_gravity="center"
+    />
+
+
     <TextView
-        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/stylish_label"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         android:id="@+id/firstLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
+
         android:text="Pin:" />
 
     <com.chaos.view.PinView
@@ -86,13 +111,4 @@
         app:viewType="rectangle">
     </com.chaos.view.PinView>
 
-    <Button
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/confirmPin"
-        android:id="@+id/passwordGen"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="PasswordGen"
-        />
-    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -49,6 +49,10 @@ class AppCreateFragment : Fragment(), View.OnClickListener {
         return binding.root
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+    }
+
     fun setUpUI(container: ViewGroup?) {
        var isEdit : Boolean = false
           val inflater = LayoutInflater.from(context)

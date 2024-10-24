@@ -3,13 +3,18 @@ import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.core.view.MenuProvider
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
 import com.androplus.pwdmgr.R
@@ -91,30 +96,6 @@ class LoginFragment : Fragment() {
                 }
             },
         )
-
-
-        binding.passwordGen.setOnClickListener { v: View? ->
-//            MethodChannel(getFlutterEngine().getDartExecutor().getBinaryMessenger(), CHANNEL)
-//                .invokeMethod("generatePassword", null, object : Result() {
-//                    fun success(result: Any?) {
-//                        // Handle the generated password here
-//                        val generatedPassword = result as String?
-//                        // Display or use the generated password
-//                    }
-//
-//                    fun error(
-//                        errorCode: String?,
-//                        errorMessage: String?,
-//                        errorDetails: Any?
-//                    ) {
-//                        // Handle the error
-//                    }
-//
-//                    fun notImplemented() {
-//                        // Handle the method not implemented
-//                    }
-//                })
-        }
     }
     fun navgiateToHomePage() {
         // move to home fragment
@@ -130,4 +111,6 @@ class LoginFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+
+
 }

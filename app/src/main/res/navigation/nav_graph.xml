@@ -30,6 +30,7 @@
     </fragment>
 
     <fragment
+        android:label="@string/app_create"
         android:id="@+id/AppAddFragment"
         android:name="com.androplus.pwdmgr.fragment.AppCreateFragment"
         tools:layout="@layout/apps_create_layout">
