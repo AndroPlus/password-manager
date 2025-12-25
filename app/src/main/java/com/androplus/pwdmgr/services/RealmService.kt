@@ -1,15 +1,12 @@
 package com.androplus.pwdmgr.services
 
 import android.util.Log
-import com.androplus.pwdmgr.MainActivity
 import com.androplus.pwdmgr.model.LoginModel
 import com.androplus.pwdmgr.model.UserApplication
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
 import io.realm.kotlin.ext.query
 import io.realm.kotlin.query.RealmResults
-import kotlinx.coroutines.runBlocking
-import java.security.SecureRandom
 
 class RealmService private constructor() {
 
