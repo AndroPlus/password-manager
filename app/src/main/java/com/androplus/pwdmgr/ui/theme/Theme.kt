@@ -9,6 +9,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.tooling.preview.Preview
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -54,4 +55,12 @@ fun PasswordManagerNewTheme(
         typography = Typography,
         content = content
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    PasswordManagerNewTheme {
+        // Add your composable here to preview
+    }
 }

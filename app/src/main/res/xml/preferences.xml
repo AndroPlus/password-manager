@@ -6,7 +6,7 @@
 
         <Preference
             android:key="download_option"
-            android:title="Download" />
+            android:title="Export Data" />
 
     </PreferenceCategory>
 
