@@ -3,7 +3,23 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/LoginFragment">
+    app:startDestination="@id/ModuleSelectionFragment">
+
+    <fragment
+        android:id="@+id/ModuleSelectionFragment"
+        android:name="com.androplus.pwdmgr.fragment.ModuleSelectionFragment"
+        android:label="Welcome"
+        tools:layout="@layout/module_selection_layout">
+        <action
+            android:id="@+id/action_selection_to_login"
+            app:destination="@id/LoginFragment" />
+        <action
+            android:id="@+id/action_selection_to_expenses"
+            app:destination="@id/ExpenseListFragment" />
+        <action
+            android:id="@+id/action_selection_to_todo"
+            app:destination="@id/TodoListFragment" />
+    </fragment>
 
     <fragment
         android:id="@+id/LoginFragment"
@@ -30,11 +46,92 @@
     </fragment>
 
     <fragment
-        android:label="@string/app_create"
         android:id="@+id/AppAddFragment"
         android:name="com.androplus.pwdmgr.fragment.AppCreateFragment"
-        tools:layout="@layout/apps_create_layout">
+        tools:layout="@layout/apps_create_layout"
+        android:label="@string/app_create" />
 
+    <!-- Expense Tracker Module -->
+    <fragment
+        android:id="@+id/ExpenseListFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.ExpenseListFragment"
+        android:label="@string/expenses"
+        tools:layout="@layout/expense_list_layout">
+        <action
+            android:id="@+id/action_expense_list_to_add"
+            app:destination="@id/ExpenseAddFragment" />
+        <action
+            android:id="@+id/action_expense_list_to_budget"
+            app:destination="@id/BudgetFragment" />
+        <action
+            android:id="@+id/action_expense_list_to_analytics"
+            app:destination="@id/ExpenseAnalyticsFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/ExpenseAddFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.ExpenseAddFragment"
+        android:label="@string/add_expense"
+        tools:layout="@layout/expense_add_layout">
+        <argument
+            android:name="expense_id"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+        <action
+            android:id="@+id/action_manage_categories"
+            app:destination="@id/CategoryListFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/CategoryListFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.CategoryListFragment"
+        android:label="@string/manage_categories"
+        tools:layout="@layout/category_list_layout">
+        <action
+            android:id="@+id/action_category_list_to_add"
+            app:destination="@id/CategoryAddFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/CategoryAddFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.CategoryAddFragment"
+        android:label="@string/add_category"
+        tools:layout="@layout/category_add_layout" />
+
+    <fragment
+        android:id="@+id/BudgetFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.BudgetFragment"
+        android:label="Budgets"
+        tools:layout="@layout/fragment_budget" />
+
+    <fragment
+        android:id="@+id/ExpenseAnalyticsFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.ExpenseAnalyticsFragment"
+        android:label="Analytics"
+        tools:layout="@layout/fragment_expense_analytics" />
+
+    <!-- Todo Module -->
+    <fragment
+        android:id="@+id/TodoListFragment"
+        android:name="com.androplus.pwdmgr.fragment.todo.TodoListFragment"
+        android:label="Tasks"
+        tools:layout="@layout/todo_list_layout">
+        <action
+            android:id="@+id/action_todo_list_to_add"
+            app:destination="@id/TodoAddFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/TodoAddFragment"
+        android:name="com.androplus.pwdmgr.fragment.todo.TodoAddFragment"
+        android:label="Add Task"
+        tools:layout="@layout/todo_add_layout">
+        <argument
+            android:name="todo_id"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
     </fragment>
 
 </navigation>

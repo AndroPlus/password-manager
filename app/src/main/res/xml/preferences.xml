@@ -1,13 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!--below line is to create preference category-->
-    <PreferenceCategory android:title="General">
+    <PreferenceCategory android:title="Expense Tracker">
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="sms_tracking_enabled"
+            android:summary="Automatically track expenses from incoming SMS"
+            android:title="SMS Tracking" />
+            
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="payment_app_tracking_enabled"
+            android:summary="Track expenses from GPay, PhonePe notifications"
+            android:title="Payment App Tracking" />
+    </PreferenceCategory>
 
+    <PreferenceCategory android:title="General">
         <Preference
             android:key="download_option"
             android:title="Export Data" />
-
     </PreferenceCategory>
 
 </PreferenceScreen>

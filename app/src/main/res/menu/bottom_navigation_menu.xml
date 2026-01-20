@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/HomeFragment"
+        android:icon="@drawable/ic_password"
+        android:title="@string/passwords" />
+    <item
+        android:id="@+id/ExpenseListFragment"
+        android:icon="@drawable/ic_expense"
+        android:title="@string/expenses" />
+</menu>

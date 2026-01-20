@@ -86,4 +86,7 @@ dependencies {
     // If using coroutines with the SDK
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.0")
 
+    implementation(libs.mpAndroidChart)
+    implementation(libs.glide)
+    implementation(libs.work.runtime.ktx)
 }

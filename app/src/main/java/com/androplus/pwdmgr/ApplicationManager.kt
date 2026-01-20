@@ -8,6 +8,9 @@ import com.androplus.pwdmgr.services.RealmService
 import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
 import java.security.SecureRandom
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 
 class ApplicationManager : Application() {
@@ -43,6 +46,24 @@ class ApplicationManager : Application() {
         }
         RealmService.getInstance(key);
 
+        // Initialize default expense categories
+        CoroutineScope(Dispatchers.IO).launch {
+            RealmService.getInstance().initializeDefaultCategories()
+        }
+
+        setupNotificationWorker()
+    }
+
+    private fun setupNotificationWorker() {
+        val workRequest = androidx.work.PeriodicWorkRequestBuilder<com.androplus.pwdmgr.worker.TodoNotificationWorker>(
+            1, java.util.concurrent.TimeUnit.DAYS
+        ).build()
+
+        androidx.work.WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "TodoNotificationWork",
+            androidx.work.ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
     }
 }
 

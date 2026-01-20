@@ -16,7 +16,8 @@ import com.androplus.pwdmgr.fragment.AppListFragment
 import com.androplus.pwdmgr.model.UserApplication
 import com.androplus.pwdmgr.services.RealmService
 import kotlinx.coroutines.launch
-import kotlin.random.Random
+
+import androidx.appcompat.app.AppCompatDelegate
 
 class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionListener {
 
@@ -26,6 +27,7 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -41,11 +43,20 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
+        
+        // Removed Bottom Navigation setup
 
-        /*binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
-        }*/
+        // Visibility logic
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            when (destination.id) {
+                R.id.LoginFragment -> {
+                    // Logic to hide toolbar if needed, or other UI elements
+                }
+                else -> {
+                    // Default logic
+                }
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -55,9 +66,6 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         return when (item.itemId) {
             R.id.action_settings -> {
                 val i = Intent(this@MainActivity, SettingsActivity::class.java)
@@ -82,6 +90,4 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
     interface RefreshAdapterListener {
         fun onRefreshAdapter()
     }
-
-
 }

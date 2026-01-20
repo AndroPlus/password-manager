@@ -16,4 +16,17 @@
     <color name="text_default">#F8BBD0</color>
     <color name="text_hint_default">#BDBDBD</color>
     <color name="text_grey">#D3D3D3</color>
+    <color name="security_blue">#2196F3</color>
+
+
+    <!-- Expense Tracker Colors -->
+    <color name="expense_red">#F44336</color>
+    <color name="income_green">#4CAF50</color>
+    <color name="category_food">#FF6B6B</color>
+    <color name="category_transport">#4ECDC4</color>
+    <color name="category_entertainment">#95E1D3</color>
+    <color name="category_housing">#F38181</color>
+    <color name="category_healthcare">#AA96DA</color>
+    <color name="category_shopping">#FCBAD3</color>
+    <color name="category_income">#4CAF50</color>
 </resources>

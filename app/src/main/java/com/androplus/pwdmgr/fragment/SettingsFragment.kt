@@ -8,8 +8,14 @@ import android.os.Environment.getExternalStoragePublicDirectory
 import android.text.InputType
 import android.widget.EditText
 import android.widget.Toast
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.provider.Settings
+import androidx.core.content.ContextCompat
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
+import androidx.preference.SwitchPreferenceCompat
 import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.model.AppField
 import com.androplus.pwdmgr.services.EncryptDecrypt
@@ -30,16 +36,37 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
         when (preference.key) {
-            "download_option"
-            -> {
+            "sms_tracking_enabled" -> {
+                val isEnabled = (preference as SwitchPreferenceCompat).isChecked
+                if (isEnabled) {
+                    checkSmsPermission()
+                }
+                return true
+            }
+            "payment_app_tracking_enabled" -> {
+                val isEnabled = (preference as SwitchPreferenceCompat).isChecked
+                if (isEnabled) {
+                    checkNotificationAccess()
+                }
+                return true
+            }
+            "download_option" -> {
                 showPasswordDialog()
                 return true
             }
             else -> {
-                return super.onPreferenceTreeClick(preferenceScreen)
+                return super.onPreferenceTreeClick(preference)
             }
         }
+    }
 
+    private fun checkNotificationAccess() {
+        val notificationListenerString = Settings.Secure.getString(requireContext().contentResolver, "enabled_notification_listeners")
+        if (notificationListenerString == null || !notificationListenerString.contains(requireContext().packageName)) {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            startActivity(intent)
+            Toast.makeText(context, "Please enable Notification Access for Expense Tracker", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun showPasswordDialog() {
@@ -86,6 +113,32 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
+    private fun checkSmsPermission() {
+        if (ContextCompat.checkSelfPermission(
+                requireContext(),
+                Manifest.permission.RECEIVE_SMS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.RECEIVE_SMS), 101)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        if (requestCode == 101) {
+            if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(context, "SMS Permission Granted", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Permission denied. SMS tracking will not work.", Toast.LENGTH_LONG).show()
+                // Optionally toggle the switch back off
+                (findPreference<SwitchPreferenceCompat>("sms_tracking_enabled"))?.isChecked = false
+            }
+        }
+    }
+
     fun exportApplicationsToJson(): JsonArray {
         val exportArray= JsonArray()
         val results = RealmService.getInstance().getAllUserApplications()
@@ -102,9 +155,9 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 // AppField data is already plain text (decrypted by Realm upon access),
                 // so we don't need to decrypt it again.
                 fieldsArray.add(gson.toJsonTree(appField))
-            };
+            }
 
-            appJsonObject.add("fields", fieldsArray);
+            appJsonObject.add("fields", fieldsArray)
             exportArray.add(appJsonObject)
         }
 
