@@ -1,0 +1,47 @@
+name: Build "PwdMgr New" APK
+
+on:
+  push:
+    branches: [claude/expense-sms-accuracy]
+  workflow_dispatch:
+
+permissions:
+  contents: write   # to publish the APK as a GitHub release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Unit tests
+        run: chmod +x gradlew && ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Build debug APK (installs alongside the existing app)
+        run: ./gradlew --no-daemon assembleDebug
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk PwdMgr-New.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PwdMgr-New
+          path: PwdMgr-New.apk
+
+      - name: Publish to the "pwdmgr-new-latest" pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete pwdmgr-new-latest --yes --cleanup-tag || true
+          gh release create pwdmgr-new-latest PwdMgr-New.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "PwdMgr New (test build)" \
+            --notes "Installs as a separate app named 'PwdMgr New' next to the existing Password Manager; it does not replace it or touch its data. Debug-signed test build from branch ${GITHUB_REF_NAME} (${GITHUB_SHA::7})."

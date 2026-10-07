@@ -29,6 +29,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            manifestPlaceholders["appLabel"] = "@string/app_name"
+        }
+        // A separate app ID so this build installs next to the existing Password
+        // Manager instead of replacing it; each app keeps its own data.
+        debug {
+            applicationIdSuffix = ".newapp"
+            versionNameSuffix = "-new"
+            manifestPlaceholders["appLabel"] = "PwdMgr New"
         }
 
     }
