@@ -15,6 +15,33 @@
             android:title="Payment App Tracking" />
     </PreferenceCategory>
 
+    <PreferenceCategory android:title="Server sync (FinIntel)">
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="server_sync_enabled"
+            android:summary="Also send bank SMS and payment notifications to your FinIntel server. OTPs are never sent."
+            android:title="Send to server" />
+
+        <EditTextPreference
+            android:dependency="server_sync_enabled"
+            android:key="server_url"
+            android:title="Server URL"
+            android:summary="e.g. https://finintel-xxxx.onrender.com"
+            android:dialogMessage="Copy it from the FinIntel Accounts page. Must start with https://" />
+
+        <EditTextPreference
+            android:dependency="server_sync_enabled"
+            android:key="server_token"
+            android:title="Upload token"
+            android:summary="Not set"
+            android:dialogMessage="Copy it from the FinIntel Accounts page." />
+
+        <Preference
+            android:dependency="server_sync_enabled"
+            android:key="server_sync_now"
+            android:title="Sync now" />
+    </PreferenceCategory>
+
     <PreferenceCategory android:title="General">
         <Preference
             android:key="download_option"

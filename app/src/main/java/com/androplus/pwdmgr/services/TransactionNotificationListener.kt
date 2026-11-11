@@ -22,6 +22,8 @@ class TransactionNotificationListener : NotificationListenerService() {
         val title = extras.getCharSequence("android.title")?.toString() ?: ""
         val text = extras.getCharSequence("android.text")?.toString() ?: ""
 
+        ServerSync.submit(this, "notification", source, title, text, sbn.postTime)
+
         val parsed = TransactionParser.parseNotification(title, text) ?: return
         AutoTransactionRecorder.record(parsed, source, "$title\n$text")
     }

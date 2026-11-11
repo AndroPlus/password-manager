@@ -25,14 +25,20 @@ class SmsReceiver : BroadcastReceiver() {
 
         // A long bank SMS arrives in several parts; parse the joined text, not each part.
         val bodiesBySender = linkedMapOf<String, StringBuilder>()
+        val sentAtBySender = mutableMapOf<String, Long>()
         for (sms in Telephony.Sms.Intents.getMessagesFromIntent(intent) ?: return) {
             val sender = sms.displayOriginatingAddress ?: continue
             bodiesBySender.getOrPut(sender) { StringBuilder() }.append(sms.messageBody ?: "")
+            sentAtBySender.putIfAbsent(sender, sms.timestampMillis)
         }
 
         val jobs = bodiesBySender.mapNotNull { (sender, body) ->
             if (!looksLikeBankSender(sender)) return@mapNotNull null
             val text = body.toString()
+            // Upload regardless of the on-phone parser's verdict: the server's rules
+            // can be newer. ServerSync applies the privacy filter (no OTPs).
+            ServerSync.submit(context, "sms", "SMS", "", text,
+                sentAtBySender[sender] ?: System.currentTimeMillis())
             val parsed = TransactionParser.parseSms(text) ?: return@mapNotNull null
             AutoTransactionRecorder.record(parsed, "SMS", text)
         }

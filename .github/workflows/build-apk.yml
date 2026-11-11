@@ -24,6 +24,20 @@ jobs:
       - name: Unit tests
         run: chmod +x gradlew && ./gradlew --no-daemon testDebugUnitTest
 
+      - name: Use the fixed signing key, if configured
+        env:
+          KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.DEBUG_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pwdmgrnew.jks"
+            echo "CI_KEYSTORE_PATH=$RUNNER_TEMP/pwdmgrnew.jks" >> "$GITHUB_ENV"
+            echo "CI_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+            echo "Signing with the fixed key: the APK installs as an update."
+          else
+            echo "::warning::No DEBUG_KEYSTORE_B64 secret: random key, uninstall the old PwdMgr New before installing."
+          fi
+
       - name: Build debug APK (installs alongside the existing app)
         run: ./gradlew --no-daemon assembleDebug
 
