@@ -6,6 +6,7 @@ import android.content.Intent
 import android.provider.Telephony
 import android.util.Log
 import androidx.preference.PreferenceManager
+import com.androplus.pwdmgr.utils.BankSender
 import com.androplus.pwdmgr.utils.TransactionParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +34,7 @@ class SmsReceiver : BroadcastReceiver() {
         }
 
         val jobs = bodiesBySender.mapNotNull { (sender, body) ->
-            if (!looksLikeBankSender(sender)) return@mapNotNull null
+            if (!BankSender.looksLikeBank(sender)) return@mapNotNull null
             val text = body.toString()
             // Upload regardless of the on-phone parser's verdict: the server's rules
             // can be newer. ServerSync applies the privacy filter (no OTPs).
@@ -55,9 +56,4 @@ class SmsReceiver : BroadcastReceiver() {
             }
         }
     }
-
-    // Banks send from alphanumeric headers (e.g. "AX-AXISBK") or short codes,
-    // never from a regular 10-digit mobile number.
-    private fun looksLikeBankSender(sender: String): Boolean =
-        sender.any { it.isLetter() } || sender.length < 10
 }

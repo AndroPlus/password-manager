@@ -13,6 +13,11 @@
             android:key="payment_app_tracking_enabled"
             android:summary="Track expenses from GPay, PhonePe notifications"
             android:title="Payment App Tracking" />
+
+        <Preference
+            android:key="import_past_sms"
+            android:summary="Add transactions from bank SMS already on this phone"
+            android:title="Import past SMS" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="Server sync (FinIntel)">

@@ -42,6 +42,15 @@ object ServerSync {
         schedule(context)
     }
 
+    /** Queue many at once (past SMS import); same privacy filter as [submit]. */
+    fun submitAll(context: Context, messages: List<OutboundMessage>): Int {
+        if (!isEnabled(context)) return 0
+        val allowed = messages.filter { OutboundFilter.shouldSend(it.title, it.text) }
+        outbox(context).enqueueAll(allowed)
+        if (allowed.isNotEmpty()) schedule(context)
+        return allowed.size
+    }
+
     fun schedule(context: Context) {
         val request = OneTimeWorkRequestBuilder<ServerSyncWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())

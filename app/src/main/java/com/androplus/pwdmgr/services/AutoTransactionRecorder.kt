@@ -24,10 +24,15 @@ object AutoTransactionRecorder {
     // Serialising check-then-save stops both passing the duplicate check.
     private val mutex = Mutex()
 
-    fun record(parsed: ParsedTransaction, source: String, rawText: String): Job =
-        scope.launch {
-            mutex.withLock { save(parsed, source, rawText, System.currentTimeMillis()) }
-        }
+    /** [at] is when the payment happened; past SMS imports pass the SMS's own time. */
+    fun record(
+        parsed: ParsedTransaction,
+        source: String,
+        rawText: String,
+        at: Long = System.currentTimeMillis(),
+    ): Job = scope.launch {
+        mutex.withLock { save(parsed, source, rawText, at) }
+    }
 
     private suspend fun save(parsed: ParsedTransaction, source: String, rawText: String, now: Long) {
         val realmService = RealmService.getInstance()

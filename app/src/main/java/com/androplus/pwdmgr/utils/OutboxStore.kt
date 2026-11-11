@@ -26,6 +26,17 @@ class OutboxStore(private val file: File, private val maxMessages: Int = 5000) {
         }
     }
 
+    /** Add many at once (history import): one read and one write instead of one per message. */
+    @Synchronized
+    fun enqueueAll(messages: List<OutboundMessage>) {
+        if (messages.isEmpty()) return
+        val existing = readAll()
+        val seen = existing.mapTo(HashSet()) { it.id }
+        val fresh = messages.filter { seen.add(it.id) }
+        if (fresh.isEmpty()) return
+        rewrite((existing + fresh).takeLast(maxMessages))
+    }
+
     @Synchronized
     fun peek(limit: Int): List<OutboundMessage> = readAll().take(limit)
 

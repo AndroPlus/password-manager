@@ -22,6 +22,12 @@ import com.androplus.pwdmgr.model.AppField
 import com.androplus.pwdmgr.services.EncryptDecrypt
 import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.services.ServerSync
+import com.androplus.pwdmgr.worker.SmsHistoryWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.androplus.pwdmgr.utils.UploadClient
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -32,6 +38,10 @@ import java.io.File
 import java.io.FileWriter
 
 class SettingsFragment : PreferenceFragmentCompat() {
+
+    companion object {
+        private const val REQUEST_READ_SMS = 102
+    }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
@@ -73,6 +83,42 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
+    private fun chooseImportPeriod() {
+        val labels = arrayOf("Last 30 days", "Last 90 days", "Last 180 days")
+        val days = intArrayOf(30, 90, 180)
+        AlertDialog.Builder(context)
+            .setTitle("Import past bank SMS")
+            .setItems(labels) { _, which -> startHistoryImport(days[which]) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun startHistoryImport(days: Int) {
+        val request = OneTimeWorkRequestBuilder<SmsHistoryWorker>()
+            .setInputData(workDataOf(SmsHistoryWorker.KEY_DAYS to days))
+            .build()
+        val wm = WorkManager.getInstance(requireContext())
+        wm.enqueueUniqueWork(SmsHistoryWorker.WORK_NAME, ExistingWorkPolicy.KEEP, request)
+        Toast.makeText(context, "Importing the last $days days of bank SMS…", Toast.LENGTH_SHORT).show()
+
+        val appContext = requireContext().applicationContext
+        wm.getWorkInfoByIdLiveData(request.id).observe(this) { info ->
+            if (info == null || !info.state.isFinished) return@observe
+            val out = info.outputData
+            val message = if (info.state == WorkInfo.State.SUCCEEDED) {
+                val found = out.getInt(SmsHistoryWorker.KEY_RECORDED, 0)
+                val queued = out.getInt(SmsHistoryWorker.KEY_QUEUED, 0)
+                "Found $found transactions in ${out.getInt(SmsHistoryWorker.KEY_SCANNED, 0)} bank SMS" +
+                    (if (queued > 0) "; $queued queued for the server." else ".") +
+                    " Already-saved ones were skipped."
+            } else {
+                "Import failed: " + (out.getString(SmsHistoryWorker.KEY_ERROR) ?: "unknown error")
+            }
+            Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+            if (isAdded) updateSyncSummary()
+        }
+    }
+
     private fun updateSyncSummary() {
         val pending = ServerSync.outbox(requireContext()).size()
         findPreference<Preference>("server_sync_now")?.summary =
@@ -92,6 +138,16 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 val isEnabled = (preference as SwitchPreferenceCompat).isChecked
                 if (isEnabled) {
                     checkNotificationAccess()
+                }
+                return true
+            }
+            "import_past_sms" -> {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_SMS)
+                    == PackageManager.PERMISSION_GRANTED
+                ) {
+                    chooseImportPeriod()
+                } else {
+                    requestPermissions(arrayOf(Manifest.permission.READ_SMS), REQUEST_READ_SMS)
                 }
                 return true
             }
@@ -179,6 +235,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        if (requestCode == REQUEST_READ_SMS) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                chooseImportPeriod()
+            } else {
+                Toast.makeText(context, "SMS permission is needed to import past messages.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         if (requestCode == 101) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(context, "SMS Permission Granted", Toast.LENGTH_SHORT).show()
