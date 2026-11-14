@@ -1,5 +1,8 @@
 name: Emulator SMS test
 
+permissions:
+  contents: write   # to publish screenshots as a release
+
 on:
   push:
     branches: [claude/expense-sms-accuracy]
@@ -45,3 +48,15 @@ jobs:
           name: emulator-screenshots
           path: emulator-shots/
           if-no-files-found: ignore
+
+      - name: Publish screenshots to the "emulator-test-latest" release
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls emulator-shots/*.png >/dev/null 2>&1 || exit 0
+          gh release delete emulator-test-latest --yes --cleanup-tag || true
+          gh release create emulator-test-latest emulator-shots/*.png \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "Emulator test screenshots" \
+            --notes "Screenshots from the emulator SMS test (${GITHUB_SHA::7})."

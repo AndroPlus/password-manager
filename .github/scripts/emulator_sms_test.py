@@ -136,10 +136,30 @@ def main():
     print("\nAll emulator checks passed")
 
 
+def diagnose():
+    """Print what the emulator is showing, to make a failure readable from the log."""
+    try:
+        shot("error")
+        print("--- resumed activity:")
+        print("\n".join(l.strip() for l in adb("shell", "dumpsys", "activity", "activities",
+                                               check=False).splitlines() if "mResumedActivity" in l))
+        print("--- on screen (resource-id | text):")
+        for n in ui_nodes():
+            rid, txt = n.get("resource-id", ""), n.get("text", "")
+            if rid or txt:
+                print(f"  {rid.split('/')[-1]} | {txt}")
+        print("--- crash log:")
+        print(adb("logcat", "-d", "-b", "crash", check=False)[-4000:])
+        print("--- app log (errors):")
+        print(adb("logcat", "-d", "*:E", check=False)[-4000:])
+    except Exception as e:
+        print("diagnose failed:", e)
+
+
 if __name__ == "__main__":
     try:
         main()
-    except Exception as e:  # keep a screenshot of whatever went wrong
-        shot("error")
+    except Exception as e:
         print("ERROR:", e)
+        diagnose()
         sys.exit(1)
