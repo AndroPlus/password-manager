@@ -150,10 +150,10 @@ def main():
     check(not any("debited" in t or "XX1234" in t for t in texts), "raw SMS text is not shown")
     check(not any("OTP" in t for t in texts), "OTP message not in the list")
 
-    # Learning: move AMAZON to Groceries once; the next AMAZON SMS must follow.
+    # Learning: move AMAZON to Cash once; the next AMAZON SMS must follow.
     tap(wait_for(text="AMAZON"))
     tap(wait_for("categorySpinner"))
-    tap(wait_for(text="Groceries"))
+    tap(wait_for(text="Cash"))   # visible without scrolling the dropdown
     time.sleep(1)
     save = find("saveButton")
     for _ in range(4):
@@ -171,7 +171,7 @@ def main():
     headers = [n.get("text") for n in ui_nodes() if n.get("resource-id", "").endswith(":id/groupNameText")]
     print("category groups after learning:", headers)
     shot("4-learned-category")
-    check("Groceries" in headers and "Shopping" not in headers,
+    check("Cash" in headers and "Shopping" not in headers,
           f"new AMAZON SMS follows the category you chose (got {headers})")
 
     if failures:
