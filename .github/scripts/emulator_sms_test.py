@@ -88,10 +88,17 @@ def main():
                    input=prefs, text=True, check=True)
 
     adb("shell", "monkey", "-p", PKG, "-c", "android.intent.category.LAUNCHER", "1")
-    tap(wait_for("firstPinView"))
-    adb("shell", "input", "text", PIN)
-    tap(wait_for("confirmPin"))
-    adb("shell", "input", "text", PIN)
+    # Some versions open on a PIN screen, others straight on the module menu.
+    end = time.time() + 40
+    while time.time() < end:
+        if find("expenseTrackerTile") is not None:
+            break
+        if find("firstPinView") is not None:
+            tap(find("firstPinView"))
+            adb("shell", "input", "text", PIN)
+            tap(wait_for("confirmPin"))
+            adb("shell", "input", "text", PIN)
+        time.sleep(1)
     tap(wait_for("expenseTrackerTile"))
     wait_for("expenseRecyclerView")
     time.sleep(2)
