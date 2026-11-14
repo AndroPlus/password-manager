@@ -24,6 +24,10 @@
             android:title="Recent payment notifications" />
 
         <Preference
+            android:key="learned_categories"
+            android:title="Learned categories" />
+
+        <Preference
             android:key="recheck_categories"
             android:summary="Re-read auto-captured transactions with the latest rules"
             android:title="Re-check categories" />

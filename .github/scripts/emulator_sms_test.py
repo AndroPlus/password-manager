@@ -150,6 +150,30 @@ def main():
     check(not any("debited" in t or "XX1234" in t for t in texts), "raw SMS text is not shown")
     check(not any("OTP" in t for t in texts), "OTP message not in the list")
 
+    # Learning: move AMAZON to Groceries once; the next AMAZON SMS must follow.
+    tap(wait_for(text="AMAZON"))
+    tap(wait_for("categorySpinner"))
+    tap(wait_for(text="Groceries"))
+    time.sleep(1)
+    save = find("saveButton")
+    for _ in range(4):
+        if save is not None:
+            break
+        adb("shell", "input", "swipe", "160", "500", "160", "150", "300")
+        time.sleep(1)
+        save = find("saveButton")
+    tap(save if save is not None else wait_for("saveButton"))
+    wait_for("expenseRecyclerView")
+    time.sleep(2)
+    adb("logcat", "-c")
+    send_sms("56767", "Rs.499 spent on your Axis Bank Credit Card XX5678 at AMAZON")
+    time.sleep(6)
+    headers = [n.get("text") for n in ui_nodes() if n.get("resource-id", "").endswith(":id/groupNameText")]
+    print("category groups after learning:", headers)
+    shot("4-learned-category")
+    check("Groceries" in headers and "Shopping" not in headers,
+          f"new AMAZON SMS follows the category you chose (got {headers})")
+
     if failures:
         print(f"\n{len(failures)} check(s) failed")
         sys.exit(1)

@@ -70,6 +70,11 @@ class SettingsFragment : PreferenceFragmentCompat() {
         findPreference<Preference>("notification_access_status")?.summary =
             if (granted) "Granted. GPay / PhonePe / Paytm notifications can be read."
             else "NOT granted — tap to open settings. Payment-app tracking cannot work without it."
+        AutoTransactionRecorder.init(ctx)
+        val learned = AutoTransactionRecorder.learnedCount()
+        findPreference<Preference>("learned_categories")?.summary =
+            if (learned == 0) "Change a transaction's category once and later ones from the same payee follow it"
+            else "$learned payee(s) remembered. Tap to forget them all."
         val seen = TransactionNotificationListener.log(ctx).recent()
         findPreference<Preference>("seen_notifications")?.summary =
             if (seen.isEmpty()) "None received yet"
@@ -225,6 +230,20 @@ class SettingsFragment : PreferenceFragmentCompat() {
             }
             "seen_notifications" -> {
                 showSeenNotifications()
+                return true
+            }
+            "learned_categories" -> {
+                if (AutoTransactionRecorder.learnedCount() > 0) {
+                    AlertDialog.Builder(context)
+                        .setTitle("Forget learned categories?")
+                        .setMessage("New transactions will use the built-in rules again. Saved transactions keep their category.")
+                        .setPositiveButton("Forget") { _, _ ->
+                            AutoTransactionRecorder.forgetLearned()
+                            updateNotificationStatus()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
                 return true
             }
             "recheck_categories" -> {

@@ -15,6 +15,9 @@ import com.androplus.pwdmgr.databinding.ExpenseAddLayoutBinding
 import com.androplus.pwdmgr.model.ExpenseCategory
 import com.androplus.pwdmgr.model.ExpenseTransaction
 import com.androplus.pwdmgr.services.RealmService
+import com.androplus.pwdmgr.services.AutoTransactionRecorder
+import com.androplus.pwdmgr.utils.DuplicateDetector
+import com.androplus.pwdmgr.utils.ExpenseGrouping
 import kotlinx.coroutines.launch
 import org.mongodb.kbson.ObjectId
 import java.text.SimpleDateFormat
@@ -32,6 +35,9 @@ class ExpenseAddFragment : Fragment() {
     private lateinit var categories: List<ExpenseCategory>
     private var editingExpenseId: String? = null
     private var currentReceiptPath: String = ""
+    // Payee name and category as captured, to learn from the user's correction.
+    private var originalShortDescription: String = ""
+    private var originalCategoryName: String = ""
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -91,6 +97,8 @@ class ExpenseAddFragment : Fragment() {
         if (editingExpenseId != null) {
             val editingExpense = RealmService.getInstance().getAllExpenses().find { it._id.toHexString() == editingExpenseId }
             editingExpense?.let { expense ->
+                originalShortDescription = expense.shortDescription
+                originalCategoryName = expense.categoryName
                 binding.amountEditText.setText(expense.amount.toString())
                 binding.descriptionEditText.setText(expense.description)
                 binding.shortDescriptionEditText.setText(expense.shortDescription)
@@ -170,9 +178,38 @@ class ExpenseAddFragment : Fragment() {
             }
 
             if (success) {
+                rememberCategory(shortDescription, category.name, type == "EXPENSE")
                 findNavController().popBackStack()
             } else {
                 Toast.makeText(context, "Error saving expense", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /**
+     * When the user picks a category for an entry, use it automatically for later
+     * SMS / notifications from the same payee, and for earlier ones too.
+     */
+    private fun rememberCategory(shortDescription: String, categoryName: String, isExpense: Boolean) {
+        val isAuto = DuplicateDetector.sourceOf(originalShortDescription) != null
+        // Auto entries: learn only when the category was actually changed.
+        if (isAuto && categoryName == originalCategoryName) return
+        val payee = if (isAuto) originalShortDescription else shortDescription
+        if (payee.isBlank()) return
+        val appContext = requireContext().applicationContext
+        val name = ExpenseGrouping.displayTitle(payee, categoryName)
+        AutoTransactionRecorder.init(appContext)
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val moved = AutoTransactionRecorder.learn(payee, isExpense, categoryName)
+            // A renamed payee should also match under its new name.
+            if (isAuto && shortDescription.isNotBlank() && shortDescription != originalShortDescription) {
+                AutoTransactionRecorder.learn(shortDescription, isExpense, categoryName)
+            }
+            if (moved == null) return@launch   // too generic to learn, e.g. "UPI payment"
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                val extra = if (moved > 0) " Moved $moved earlier one(s) too." else ""
+                Toast.makeText(appContext, "$name will now go to $categoryName automatically.$extra",
+                    Toast.LENGTH_LONG).show()
             }
         }
     }
