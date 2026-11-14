@@ -3,9 +3,8 @@ name: Emulator SMS test
 permissions:
   contents: write   # to publish screenshots as a release
 
+# Manual only: start it from the Actions tab when an emulator run is wanted.
 on:
-  push:
-    branches: [claude/expense-sms-accuracy]
   workflow_dispatch:
 
 jobs:

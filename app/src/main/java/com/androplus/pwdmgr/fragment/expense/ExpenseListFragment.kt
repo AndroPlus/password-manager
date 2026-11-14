@@ -19,6 +19,10 @@ import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.utils.DuplicateDetector
 import com.androplus.pwdmgr.utils.ExpenseGrouping
 import com.androplus.pwdmgr.utils.ExpenseRow
+import androidx.core.util.Pair as AndroidPair
+import com.google.android.material.datepicker.MaterialDatePicker
+import java.text.SimpleDateFormat
+import java.util.TimeZone
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Calendar
@@ -35,6 +39,10 @@ class ExpenseListFragment : Fragment() {
         .apply { maximumFractionDigits = 0 }
 
     private var currentFilter = "THIS_MONTH"
+    // Chosen with the date picker: local start of the first day, end of the last day.
+    private var customStart = 0L
+    private var customEnd = 0L
+    private val dayFormat = SimpleDateFormat("d MMM", Locale("en", "IN"))
     private var loaded: List<ExpenseTransaction> = emptyList()
 
     override fun onCreateView(
@@ -95,6 +103,7 @@ class ExpenseListFragment : Fragment() {
         binding.chipToday.setOnClickListener { setFilter("TODAY") }
         binding.chipThisMonth.setOnClickListener { setFilter("THIS_MONTH") }
         binding.chipLastMonth.setOnClickListener { setFilter("LAST_MONTH") }
+        binding.chipPickDates.setOnClickListener { showDatePicker() }
 
         binding.btnAnalytics.setOnClickListener {
             findNavController().navigate(R.id.action_expense_list_to_analytics)
@@ -103,6 +112,60 @@ class ExpenseListFragment : Fragment() {
         binding.btnBudgets.setOnClickListener {
             findNavController().navigate(R.id.action_expense_list_to_budget)
         }
+    }
+
+    /** Pick one day (tap it twice) or a range; the list then shows only those days. */
+    private fun showDatePicker() {
+        val builder = MaterialDatePicker.Builder.dateRangePicker()
+            .setTitleText("Show transactions from")
+        if (currentFilter == "CUSTOM") {
+            builder.setSelection(AndroidPair(toUtcDay(customStart), toUtcDay(customEnd)))
+        }
+        val picker = builder.build()
+        picker.addOnPositiveButtonClickListener { sel ->
+            val first = sel.first ?: return@addOnPositiveButtonClickListener
+            val last = sel.second ?: first
+            customStart = localDayStart(first)
+            customEnd = localDayStart(last) + DAY_MILLIS - 1
+            setFilter("CUSTOM")
+        }
+        // Cancelled: keep the chip selection in line with what the list shows.
+        picker.addOnDismissListener { syncChips() }
+        picker.show(childFragmentManager, "expense_date_picker")
+    }
+
+    /** The picker works in UTC midnights; the list in the phone's local days. */
+    private fun localDayStart(utcMidnight: Long): Long {
+        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply { timeInMillis = utcMidnight }
+        return Calendar.getInstance().apply {
+            clear()
+            set(utc.get(Calendar.YEAR), utc.get(Calendar.MONTH), utc.get(Calendar.DAY_OF_MONTH))
+        }.timeInMillis
+    }
+
+    private fun toUtcDay(localMillis: Long): Long {
+        val local = Calendar.getInstance().apply { timeInMillis = localMillis }
+        return Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            clear()
+            set(local.get(Calendar.YEAR), local.get(Calendar.MONTH), local.get(Calendar.DAY_OF_MONTH))
+        }.timeInMillis
+    }
+
+    private fun syncChips() {
+        if (_binding == null) return
+        when (currentFilter) {
+            "ALL" -> binding.chipAllTime
+            "TODAY" -> binding.chipToday
+            "LAST_MONTH" -> binding.chipLastMonth
+            "CUSTOM" -> binding.chipPickDates
+            else -> binding.chipThisMonth
+        }.isChecked = true
+    }
+
+    private fun customLabel(): String {
+        val a = dayFormat.format(customStart)
+        val b = dayFormat.format(customEnd)
+        return if (a == b) a else "$a – $b"
     }
 
     private fun setFilter(filter: String) {
@@ -117,6 +180,7 @@ class ExpenseListFragment : Fragment() {
             "TODAY" -> periodRange(Calendar.DAY_OF_MONTH, 0).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
             "THIS_MONTH" -> periodRange(Calendar.MONTH, 0).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
             "LAST_MONTH" -> periodRange(Calendar.MONTH, -1).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
+            "CUSTOM" -> realm.getExpensesByDateRange(customStart, customEnd)
             else -> realm.getAllExpenses()
         }
 
@@ -124,11 +188,14 @@ class ExpenseListFragment : Fragment() {
             "TODAY" -> "Today"
             "LAST_MONTH" -> "Last Month"
             "ALL" -> "All Time"
+            "CUSTOM" -> customLabel()
             else -> getString(R.string.this_month)
         }
         val rows = loaded.map { it.toRow() }
         groupAdapter.submit(ExpenseGrouping.group(rows))
         updateSummary(rows)
+        binding.chipPickDates.text = if (currentFilter == "CUSTOM") customLabel() else "Pick dates"
+        syncChips()
         binding.emptyStateText.visibility = if (loaded.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -171,6 +238,10 @@ class ExpenseListFragment : Fragment() {
         binding.totalIncomeText.text = summaryFormat.format(income)
         binding.totalExpenseText.text = summaryFormat.format(expense)
         binding.balanceText.text = summaryFormat.format(income - expense)
+    }
+
+    companion object {
+        private const val DAY_MILLIS = 24L * 60 * 60 * 1000
     }
 
     override fun onDestroyView() {
