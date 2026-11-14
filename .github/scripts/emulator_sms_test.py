@@ -36,9 +36,17 @@ def shot(name):
 
 
 def ui_nodes():
-    adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
-    xml = adb("shell", "cat", "/sdcard/ui.xml")
-    return ET.fromstring(xml[xml.index("<"):]).iter("node")
+    # uiautomator dump sometimes fails while the screen is changing; retry.
+    for attempt in range(5):
+        try:
+            adb("shell", "rm", "-f", "/sdcard/ui.xml")
+            adb("shell", "uiautomator", "dump", "/sdcard/ui.xml")
+            xml = adb("shell", "cat", "/sdcard/ui.xml")
+            return ET.fromstring(xml[xml.index("<"):]).iter("node")
+        except Exception:
+            if attempt == 4:
+                raise
+            time.sleep(1)
 
 
 def find(id_suffix=None, text=None):
