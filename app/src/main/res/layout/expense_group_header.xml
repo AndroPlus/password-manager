@@ -1,25 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Category header: tap to show / hide its transactions. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="8dp"
-    app:cardCornerRadius="8dp"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginTop="8dp"
+    app:cardCornerRadius="10dp"
     app:cardElevation="2dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="?attr/selectableItemBackground"
+        android:gravity="center_vertical"
+        android:minHeight="56dp"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="12dp">
 
-        <!-- Category Color Indicator -->
         <View
-            android:id="@+id/categoryColorIndicator"
-            android:layout_width="4dp"
-            android:layout_height="match_parent"
+            android:id="@+id/groupColorDot"
+            android:layout_width="12dp"
+            android:layout_height="12dp"
             android:layout_marginEnd="12dp"
-            android:background="@color/category_food" />
+            android:background="@drawable/circle_background" />
 
         <LinearLayout
             android:layout_width="0dp"
@@ -27,46 +32,36 @@
             android:layout_weight="1"
             android:orientation="vertical">
 
-            <!-- Short Description -->
             <TextView
-                android:id="@+id/shortDescriptionText"
+                android:id="@+id/groupNameText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="[Auto] paytm"
                 android:textColor="?android:attr/textColorPrimary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-            <!-- Full Description -->
             <TextView
-                android:id="@+id/descriptionText"
+                android:id="@+id/groupCountText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Full SMS body here..."
-                android:textColor="?android:attr/textColorSecondary"
-                android:textSize="12sp" />
-
-            <!-- Date -->
-            <TextView
-                android:id="@+id/dateText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Dec 30, 2025"
                 android:textColor="?android:attr/textColorSecondary"
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- Amount -->
         <TextView
-            android:id="@+id/amountText"
+            android:id="@+id/groupTotalText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
-            android:text="₹500.00"
-            android:textColor="@color/expense_red"
-            android:textSize="18sp"
+            android:layout_marginEnd="8dp"
+            android:textSize="16sp"
             android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/groupChevron"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="Show transactions"
+            android:src="@android:drawable/arrow_down_float"
+            app:tint="?android:attr/textColorSecondary" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
