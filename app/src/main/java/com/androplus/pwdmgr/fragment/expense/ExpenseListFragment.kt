@@ -30,6 +30,9 @@ class ExpenseListFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var groupAdapter: ExpenseGroupAdapter
     private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+    // Whole rupees in the summary card so large totals fit on one line.
+    private val summaryFormat = (NumberFormat.getCurrencyInstance(Locale("en", "IN")))
+        .apply { maximumFractionDigits = 0 }
 
     private var currentFilter = "THIS_MONTH"
     private var loaded: List<ExpenseTransaction> = emptyList()
@@ -165,9 +168,9 @@ class ExpenseListFragment : Fragment() {
 
     private fun updateSummary(rows: List<ExpenseRow>) {
         val (income, expense) = ExpenseGrouping.totals(rows)
-        binding.totalIncomeText.text = currencyFormat.format(income)
-        binding.totalExpenseText.text = currencyFormat.format(expense)
-        binding.balanceText.text = currencyFormat.format(income - expense)
+        binding.totalIncomeText.text = summaryFormat.format(income)
+        binding.totalExpenseText.text = summaryFormat.format(expense)
+        binding.balanceText.text = summaryFormat.format(income - expense)
     }
 
     override fun onDestroyView() {
