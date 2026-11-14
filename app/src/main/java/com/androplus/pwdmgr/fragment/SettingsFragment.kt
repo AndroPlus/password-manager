@@ -22,6 +22,15 @@ import com.androplus.pwdmgr.model.AppField
 import com.androplus.pwdmgr.services.EncryptDecrypt
 import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.services.ServerSync
+import com.androplus.pwdmgr.services.AutoTransactionRecorder
+import com.androplus.pwdmgr.services.TransactionNotificationListener
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import com.androplus.pwdmgr.worker.SmsHistoryWorker
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
@@ -51,6 +60,75 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onResume() {
         super.onResume()
         updateSyncSummary()
+        updateNotificationStatus()
+    }
+
+    private fun updateNotificationStatus() {
+        val ctx = requireContext()
+        val granted = TransactionNotificationListener.hasAccess(ctx)
+        if (granted) TransactionNotificationListener.rebind(ctx)
+        findPreference<Preference>("notification_access_status")?.summary =
+            if (granted) "Granted. GPay / PhonePe / Paytm notifications can be read."
+            else "NOT granted — tap to open settings. Payment-app tracking cannot work without it."
+        val seen = TransactionNotificationListener.log(ctx).recent()
+        findPreference<Preference>("seen_notifications")?.summary =
+            if (seen.isEmpty()) "None received yet"
+            else "${seen.size} received; last at " + timeFormat.format(Date(seen.first().timeMillis))
+    }
+
+    private val timeFormat = SimpleDateFormat("dd MMM, HH:mm", Locale("en", "IN"))
+
+    private fun showNotificationAccessHelp() {
+        AlertDialog.Builder(context)
+            .setTitle("Allow notification access")
+            .setMessage(
+                "1. Tap Open settings and switch on \"PwdMgr New\".\n\n" +
+                "If Android says it is a restricted setting (Android 13+, apps installed from an APK):\n" +
+                "2. Open App info for PwdMgr New → ⋮ menu (top right) → Allow restricted settings.\n" +
+                "3. Come back and switch it on.\n\n" +
+                "Note: GPay and PhonePe often show no notification for money you send. " +
+                "Bank and credit-card SMS remain the most reliable source; keep SMS Tracking on."
+            )
+            .setPositiveButton("Open settings") { _, _ ->
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            }
+            .setNeutralButton("App info") { _, _ ->
+                startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(android.net.Uri.parse("package:" + requireContext().packageName))
+                )
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun showSeenNotifications() {
+        val log = TransactionNotificationListener.log(requireContext())
+        val seen = log.recent()
+        val body = if (seen.isEmpty()) {
+            "No GPay / PhonePe / Paytm notification has reached this app yet.\n\n" +
+                "If you have made payments since enabling access, notification access is probably " +
+                "blocked or the payment app does not notify for outgoing payments."
+        } else {
+            seen.joinToString("\n\n") {
+                "${timeFormat.format(Date(it.timeMillis))} · ${it.source} · ${it.outcome}\n${it.title}\n${it.text}"
+            }
+        }
+        AlertDialog.Builder(context)
+            .setTitle("Recent payment notifications")
+            .setMessage(body)
+            .setPositiveButton("OK", null)
+            .setNegativeButton("Clear") { _, _ -> log.clear(); updateNotificationStatus() }
+            .show()
+    }
+
+    private fun recheckCategories() {
+        Toast.makeText(context, "Re-checking categories…", Toast.LENGTH_SHORT).show()
+        val appContext = requireContext().applicationContext
+        lifecycleScope.launch {
+            val changed = withContext(Dispatchers.IO) { AutoTransactionRecorder.reclassifyAll() }
+            Toast.makeText(appContext, "Updated $changed transaction(s)", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun setupServerSyncPreferences() {
@@ -141,6 +219,18 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 }
                 return true
             }
+            "notification_access_status" -> {
+                showNotificationAccessHelp()
+                return true
+            }
+            "seen_notifications" -> {
+                showSeenNotifications()
+                return true
+            }
+            "recheck_categories" -> {
+                recheckCategories()
+                return true
+            }
             "import_past_sms" -> {
                 if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_SMS)
                     == PackageManager.PERMISSION_GRANTED
@@ -168,12 +258,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun checkNotificationAccess() {
-        val notificationListenerString = Settings.Secure.getString(requireContext().contentResolver, "enabled_notification_listeners")
-        if (notificationListenerString == null || !notificationListenerString.contains(requireContext().packageName)) {
-            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-            startActivity(intent)
-            Toast.makeText(context, "Please enable Notification Access for Expense Tracker", Toast.LENGTH_LONG).show()
-        }
+        if (!TransactionNotificationListener.hasAccess(requireContext())) showNotificationAccessHelp()
     }
 
     private fun showPasswordDialog() {

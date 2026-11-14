@@ -17,6 +17,8 @@ data class CategoryGroup(
     val color: String,
     val rows: List<ExpenseRow>,
 ) {
+    /** False for money that only moved between your own accounts or paid a card bill. */
+    val counted: Boolean get() = name !in ExpenseGrouping.NOT_COUNTED
     val spent: Double get() = rows.filterNot { it.isIncome }.sumOf { it.amount }
     val received: Double get() = rows.filter { it.isIncome }.sumOf { it.amount }
 }
@@ -24,6 +26,19 @@ data class CategoryGroup(
 object ExpenseGrouping {
 
     const val UNCATEGORIZED = "Uncategorized"
+
+    /**
+     * Not income or spending. A card bill payment is already counted through the
+     * card purchases themselves; a self-transfer only moves your own money.
+     */
+    val NOT_COUNTED = setOf("Transfers", "Card Bill")
+
+    /** Totals that leave out [NOT_COUNTED]: (income, expense). */
+    fun totals(rows: List<ExpenseRow>): Pair<Double, Double> {
+        val counted = rows.filter { it.categoryName !in NOT_COUNTED }
+        return counted.filter { it.isIncome }.sumOf { it.amount } to
+            counted.filterNot { it.isIncome }.sumOf { it.amount }
+    }
 
     /**
      * "[GPay] swiggy" → "Swiggy". Auto entries carry a source tag and often a
@@ -43,7 +58,7 @@ object ExpenseGrouping {
 
     /**
      * Groups by category: biggest spending first, then categories with only
-     * income. Inside a group, newest first.
+     * income, then the not-counted ones (transfers, card bills). Newest first inside.
      */
     fun group(rows: List<ExpenseRow>): List<CategoryGroup> =
         rows.groupBy { it.categoryName.ifBlank { UNCATEGORIZED } }
@@ -54,5 +69,9 @@ object ExpenseGrouping {
                     rows = items.sortedByDescending { it.timeMillis },
                 )
             }
-            .sortedWith(compareByDescending<CategoryGroup> { it.spent }.thenByDescending { it.received })
+            .sortedWith(
+                compareByDescending<CategoryGroup> { it.counted }
+                    .thenByDescending { it.spent }
+                    .thenByDescending { it.received },
+            )
 }

@@ -26,6 +26,12 @@ object TransactionParser {
     private val last4Regex =
         Regex("""(?:a/?c|acct|account|card|ac)\D{0,6}?[x*]+\s*0*(\d{3,4})""", RegexOption.IGNORE_CASE)
     private val cardEndingRegex = Regex("""ending(?:\s+with)?\s*(\d{4})""", RegexOption.IGNORE_CASE)
+    private val plainCardRegex = Regex("""\bcard\s+(?:no\.?\s*)?(\d{4})\b""", RegexOption.IGNORE_CASE)
+
+    // Axis: "UPI/P2M/<ref>/<NAME>", "UPI TO MERCHANT : NAME (", "UPI TRANSFER TO NAME ("
+    private val upiPathRegex = Regex("""UPI/P2[AMP]/\d+/([^/\n]+)""", RegexOption.IGNORE_CASE)
+    private val upiNarrationRegex =
+        Regex("""UPI (?:TO MERCHANT\s*:|TRANSFER TO)\s*([^(\n]+?)\s*\(""", RegexOption.IGNORE_CASE)
 
     private val vpaRegex = Regex("""\b([a-z0-9._-]{2,}@[a-z]{2,})\b""", RegexOption.IGNORE_CASE)
 
@@ -41,6 +47,7 @@ object TransactionParser {
         "will be debited", "will be credited", "requested", "requesting", "request money",
         "e-mandate registered", "mandate is set", "due on", "min amt due", "minimum amount due",
         "reminder", "statement is", "statement for", "cashback of", "congratulations", "win ",
+        "declined", "failed", "unsuccessful", "not successful", "could not be",
     )
 
     private val notificationRejects = listOf(
@@ -51,6 +58,8 @@ object TransactionParser {
     private val debitWords = listOf(
         "debited", "debit", "spent", "withdrawn", "paid", "purchase", "sent",
         "deducted", "transferred to", "used for",
+        // HDFC card alerts: "Txn Rs.30.00 On HDFC Bank Card 1234 At ... by UPI"
+        "txn",
     )
     private val creditWords = listOf("credited", "credit", "received", "deposited", "refund")
 
@@ -66,6 +75,7 @@ object TransactionParser {
 
         val last4 = last4Regex.find(text)?.groupValues?.get(1)?.takeLast(4)
             ?: cardEndingRegex.find(text)?.groupValues?.get(1)
+            ?: plainCardRegex.find(text)?.groupValues?.get(1)
         val hasAccountRef = last4 != null ||
             listOf("a/c", "acct", "account", "card").any { it in low }
         if (!hasAccountRef) return null
@@ -141,6 +151,10 @@ object TransactionParser {
             val handle = vpa.substringBefore("@")
             // A bare phone-number handle says nothing useful about the payee.
             return if (handle.all { it.isDigit() }) "UPI transfer" else handle
+        }
+        (upiPathRegex.find(text) ?: upiNarrationRegex.find(text))?.let { m ->
+            val name = m.groupValues[1].trim().trimEnd('.', ' ')
+            if (name.isNotEmpty()) return name.take(40)
         }
         // ICICI style: "...; RAVI KUMAR credited. UPI:123"
         Regex(""";\s*([A-Za-z][A-Za-z .]{1,40}?)\s+credited""").find(text)

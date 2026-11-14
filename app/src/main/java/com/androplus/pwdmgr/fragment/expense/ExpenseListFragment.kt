@@ -117,8 +117,15 @@ class ExpenseListFragment : Fragment() {
             else -> realm.getAllExpenses()
         }
 
-        groupAdapter.submit(ExpenseGrouping.group(loaded.map { it.toRow() }))
-        updateSummary(loaded)
+        binding.summaryPeriodText.text = when (currentFilter) {
+            "TODAY" -> "Today"
+            "LAST_MONTH" -> "Last Month"
+            "ALL" -> "All Time"
+            else -> getString(R.string.this_month)
+        }
+        val rows = loaded.map { it.toRow() }
+        groupAdapter.submit(ExpenseGrouping.group(rows))
+        updateSummary(rows)
         binding.emptyStateText.visibility = if (loaded.isEmpty()) View.VISIBLE else View.GONE
     }
 
@@ -156,21 +163,11 @@ class ExpenseListFragment : Fragment() {
         categoryColor = categoryColor,
     )
 
-    private fun updateSummary(expenses: List<ExpenseTransaction>) {
-        var totalIncome = 0.0
-        var totalExpense = 0.0
-
-        for (expense in expenses) {
-            if (expense.type == "INCOME") {
-                totalIncome += expense.amount
-            } else {
-                totalExpense += expense.amount
-            }
-        }
-
-        binding.totalIncomeText.text = currencyFormat.format(totalIncome)
-        binding.totalExpenseText.text = currencyFormat.format(totalExpense)
-        binding.balanceText.text = currencyFormat.format(totalIncome - totalExpense)
+    private fun updateSummary(rows: List<ExpenseRow>) {
+        val (income, expense) = ExpenseGrouping.totals(rows)
+        binding.totalIncomeText.text = currencyFormat.format(income)
+        binding.totalExpenseText.text = currencyFormat.format(expense)
+        binding.balanceText.text = currencyFormat.format(income - expense)
     }
 
     override fun onDestroyView() {

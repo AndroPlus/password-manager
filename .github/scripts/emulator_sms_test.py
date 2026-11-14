@@ -108,6 +108,9 @@ def main():
     send_sms("56767", "Rs 150.00 debited from a/c XX1234 to VPA swiggy@ybl UPI Ref 101. Avl bal: Rs 9,000 -Axis Bank")
     send_sms("56767", "Rs.1899 spent on your Axis Bank Credit Card XX5678 at AMAZON")
     send_sms("56767", "Rs.85,000.00 credited to A/c XX1234 by NEFT ACME SALARY")
+    # HDFC credit-card UPI alert: no "debited" word, card number without XX (fictional card).
+    send_sms("56767", "Txn Rs.30.00 On HDFC Bank Card 1234 At *abcd@ptys by UPI 100000000001 On 14-11 Not You? Call 18002586161/SMS BLOCK CC 1234 to 7308080808")
+    send_sms("56767", "Your card ending 1234 txn of Rs 999 has been declined")   # failed, not a spend
     send_sms("56767", "123456 is your OTP for txn of Rs 2000 at Amazon. Do not share.")
     send_sms("9876543210", "Rs 500 paid to you for dinner, thanks")          # a person, not a bank
     send_sms("56767", "Rs 150.00 debited from a/c XX1234 to VPA swiggy@ybl UPI Ref 101. Avl bal: Rs 9,000 -Axis Bank")
@@ -117,13 +120,15 @@ def main():
     saved = log.count("Saved SMS transaction: true")
     dupes = log.count("Skipped duplicate SMS transaction")
     print(log)
-    check(saved == 3, f"3 real transactions saved (got {saved})")
+    check(saved == 4, f"4 real transactions saved (got {saved})")
     check(dupes == 1, f"repeated SMS skipped as duplicate (got {dupes})")
 
     # The list was open the whole time: it must have updated without reopening.
     shot("2-expense-list-live-update")
     headers = [n.get("text") for n in ui_nodes() if n.get("resource-id", "").endswith(":id/groupNameText")]
     print("category groups:", headers)
+    check("Shopping" in headers and headers.count("Shopping") == 1 and "Other" in headers,
+          f"card UPI payment lands in Other, not Shopping (got {headers})")
     check({"Food & Dining", "Shopping", "Income"} <= set(headers),
           f"grouped by category, list refreshed live (got {headers})")
 

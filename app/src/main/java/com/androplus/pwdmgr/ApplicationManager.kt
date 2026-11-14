@@ -49,6 +49,13 @@ class ApplicationManager : Application() {
         // Initialize default expense categories
         CoroutineScope(Dispatchers.IO).launch {
             RealmService.getInstance().initializeDefaultCategories()
+            // One time after an update that improves the rules: fix entries saved
+            // earlier (e.g. everything unrecognised filed under Shopping).
+            val prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
+            if (prefs.getInt(RULES_VERSION_KEY, 0) < RULES_VERSION) {
+                com.androplus.pwdmgr.services.AutoTransactionRecorder.reclassifyAll()
+                prefs.edit().putInt(RULES_VERSION_KEY, RULES_VERSION).apply()
+            }
         }
 
         setupNotificationWorker()
@@ -65,5 +72,10 @@ class ApplicationManager : Application() {
             workRequest
         )
     }
-}
 
+    companion object {
+        /** Bump when categorization rules change enough to re-check saved entries. */
+        private const val RULES_VERSION = 2
+        private const val RULES_VERSION_KEY = "auto_rules_version"
+    }
+}

@@ -2,6 +2,7 @@ package com.androplus.pwdmgr.services
 
 import android.util.Log
 import com.androplus.pwdmgr.model.ExpenseTransaction
+import com.androplus.pwdmgr.utils.AutoReclassifier
 import com.androplus.pwdmgr.utils.AutoTxn
 import com.androplus.pwdmgr.utils.DuplicateDetector
 import com.androplus.pwdmgr.utils.ParsedTransaction
@@ -50,13 +51,10 @@ object AutoTransactionRecorder {
         }
 
         val categories = realmService.getAllCategories()
-        val matchedName = TransactionCategorizer.categorize(
+        val matchedName = TransactionCategorizer.categorizeOrOther(
             parsed.merchant, rawText, parsed.isExpense, categories.map { it.name },
         )
         val category = categories.find { it.name == matchedName }
-            ?: categories.find { it.name.contains("Other", true) }
-            ?: categories.find { it.name.contains("Shopping", true) }
-            ?: categories.firstOrNull()
 
         val expense = ExpenseTransaction().apply {
             amount = parsed.amount
@@ -72,5 +70,39 @@ object AutoTransactionRecorder {
         }
         val saved = realmService.createExpense(expense)
         Log.d(TAG, "Saved $source transaction: $saved")
+    }
+
+    /**
+     * Re-reads every auto-captured entry with the current rules and fixes its
+     * name, direction and category. Manual entries are never touched.
+     * Returns how many entries changed.
+     */
+    suspend fun reclassifyAll(): Int = mutex.withLock {
+        val realmService = RealmService.getInstance()
+        val categories = realmService.getAllCategories()
+        val names = categories.map { it.name }
+        var changed = 0
+        for (e in realmService.getAllExpenses()) {
+            val source = DuplicateDetector.sourceOf(e.shortDescription) ?: continue
+            val r = AutoReclassifier.reclassify(source, e.description, names) ?: continue
+            val cat = categories.find { it.name == r.category } ?: continue
+            val newShort = DuplicateDetector.tag(if (source == "Auto") "SMS" else source, r.merchant)
+            val newType = if (r.isExpense) "EXPENSE" else "INCOME"
+            if (newShort == e.shortDescription && cat.name == e.categoryName && newType == e.type) continue
+            val updated = ExpenseTransaction().apply {
+                _id = e._id
+                amount = e.amount
+                description = e.description
+                date = e.date
+                shortDescription = newShort
+                type = newType
+                categoryId = cat._id.toHexString()
+                categoryName = cat.name
+                categoryColor = cat.color
+            }
+            if (realmService.updateExpense(updated)) changed++
+        }
+        Log.d(TAG, "Re-checked categories: $changed changed")
+        changed
     }
 }

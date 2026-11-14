@@ -132,4 +132,36 @@ class TransactionParserTest {
         assertNull(TransactionParser.parseNotification("Pay ₹499 to Airtel", "Your bill is due"))
         assertNull(TransactionParser.parseNotification("Payment failed", "₹250 to Zomato could not be completed"))
     }
+
+    // ---- formats from real alerts (numbers changed) ---------------------------
+
+    @Test fun hdfcCardUpiTxnWithoutDebitWord() {
+        val t = sms("Txn Rs.30.00\nOn HDFC Bank Card 1234\nAt *abcd@ptys \nby UPI 100000000001\n" +
+            "On 14-11\nNot You?\nCall 18002586161/SMS BLOCK CC 1234 to 7308080808")
+        assertEquals(30.0, t.amount, 0.001)
+        assertTrue("a card 'Txn' is money spent", t.isExpense)
+        assertEquals("1234", t.last4)
+        assertEquals("abcd", t.merchant)
+    }
+
+    @Test fun axisAlertPayeeFromUpiPath() {
+        val t = sms("INR 180.00 debited\nA/c no. XX1234\n14-11-26, 10:15:02\n" +
+            "UPI/P2M/100000000002/SRI GANESH STORES\nNot you? SMS BLOCKUPI Cust ID to 919000000000\nAxis Bank")
+        assertTrue(t.isExpense)
+        assertEquals("SRI GANESH STORES", t.merchant)
+    }
+
+    @Test fun axisNewUpiNarrations() {
+        assertEquals("GREEN MART", sms("INR 99.00 debited from A/c no. XX1234 UPI TO MERCHANT : GREEN MART (100000000003)").merchant)
+        assertEquals("RAVI KUMAR", sms("INR 500.00 debited from A/c no. XX1234 UPI TRANSFER TO RAVI KUMAR (100000000004)").merchant)
+    }
+
+    @Test fun creditStillWinsWhenTxnComesLater() {
+        assertFalse(sms("Rs 500.00 credited to A/c XX1234 by UPI txn 1000 from ravi@oksbi").isExpense)
+    }
+
+    @Test fun ignoresDeclinedOrFailedTxn() {
+        assertNull(TransactionParser.parseSms("Txn Rs.500.00 on HDFC Bank Card 1234 at AMAZON declined due to insufficient limit"))
+        assertNull(TransactionParser.parseSms("Txn of Rs 250 from A/c XX1234 failed. Amount will not be debited"))
+    }
 }

@@ -159,62 +159,42 @@ class RealmService private constructor() {
         }
     }
 
+    /**
+     * Adds any default category the user doesn't have yet, matched by name, so
+     * categories introduced in later versions reach existing installs too. Never
+     * renames or removes the user's own categories.
+     */
     suspend fun initializeDefaultCategories() {
-        val existingCategories = getAllCategories()
-        if (existingCategories.isNotEmpty()) {
-            Log.d("RealmService", "Categories already initialized")
-            return
-        }
-
-        val defaultCategories = listOf(
-            ExpenseCategory().apply {
-                name = "Food & Dining"
-                icon = "food"
-                color = "#FF6B6B"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Transportation"
-                icon = "transport"
-                color = "#4ECDC4"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Entertainment"
-                icon = "entertainment"
-                color = "#95E1D3"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Housing"
-                icon = "housing"
-                color = "#F38181"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Healthcare"
-                icon = "healthcare"
-                color = "#AA96DA"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Shopping"
-                icon = "shopping"
-                color = "#FCBAD3"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Income"
-                icon = "income"
-                color = "#4CAF50"
-                isDefault = true
-            }
+        val existing = getAllCategories().mapTo(HashSet()) { it.name.lowercase() }
+        val defaults = listOf(
+            Triple("Food & Dining", "food", "#FF6B6B"),
+            Triple("Groceries", "groceries", "#8BC34A"),
+            Triple("Transportation", "transport", "#4ECDC4"),
+            Triple("Bills & Utilities", "bills", "#FF9800"),
+            Triple("Entertainment", "entertainment", "#95E1D3"),
+            Triple("Housing", "housing", "#F38181"),
+            Triple("Healthcare", "healthcare", "#AA96DA"),
+            Triple("Education", "education", "#3F51B5"),
+            Triple("Shopping", "shopping", "#FCBAD3"),
+            Triple("Insurance & Savings", "savings", "#009688"),
+            Triple("Cash", "cash", "#795548"),
+            Triple("Income", "income", "#4CAF50"),
+            Triple("Transfers", "transfers", "#9E9E9E"),
+            Triple("Card Bill", "card", "#607D8B"),
+            Triple("Other", "other", "#BDBDBD"),
         )
-
-        defaultCategories.forEach { category ->
-            createCategory(category)
+        var added = 0
+        for ((name, icon, color) in defaults) {
+            if (name.lowercase() in existing) continue
+            createCategory(ExpenseCategory().apply {
+                this.name = name
+                this.icon = icon
+                this.color = color
+                isDefault = true
+            })
+            added++
         }
-        Log.d("RealmService", "Default categories initialized")
+        Log.d("RealmService", "Default categories: added $added")
     }
 
     // ==================== EXPENSE TRANSACTION METHODS ====================

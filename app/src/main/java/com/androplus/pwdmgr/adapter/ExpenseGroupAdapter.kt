@@ -91,8 +91,12 @@ class ExpenseGroupAdapter(
             dot.backgroundTintList = ColorStateList.valueOf(parseColor(group.color))
             name.text = group.name
             val n = group.rows.size
-            count.text = if (n == 1) "1 transaction" else "$n transactions"
-            if (group.spent > 0 || group.received == 0.0) {
+            count.text = (if (n == 1) "1 transaction" else "$n transactions") +
+                if (group.counted) "" else " · not counted in totals"
+            if (!group.counted) {
+                total.text = currency.format(group.spent + group.received)
+                total.setTextColor(ctx.getColor(android.R.color.darker_gray))
+            } else if (group.spent > 0 || group.received == 0.0) {
                 total.text = currency.format(group.spent)
                 total.setTextColor(ctx.getColor(R.color.expense_red))
             } else {

@@ -15,6 +15,20 @@
             android:title="Payment App Tracking" />
 
         <Preference
+            android:key="notification_access_status"
+            android:title="Notification access" />
+
+        <Preference
+            android:key="seen_notifications"
+            android:summary="Payment-app notifications this app has received, and how each was read"
+            android:title="Recent payment notifications" />
+
+        <Preference
+            android:key="recheck_categories"
+            android:summary="Re-read auto-captured transactions with the latest rules"
+            android:title="Re-check categories" />
+
+        <Preference
             android:key="import_past_sms"
             android:summary="Add transactions from bank SMS already on this phone"
             android:title="Import past SMS" />
