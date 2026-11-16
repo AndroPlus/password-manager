@@ -47,15 +47,13 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
         // Removed Bottom Navigation setup
 
         // Visibility logic
+        // Screens that draw their own header have no toolbar.
+        val noToolbar = setOf(
+            R.id.ModuleSelectionFragment, R.id.LoginFragment,
+            R.id.ExpenseHomeFragment, R.id.ExpenseListFragment, R.id.InsightsFragment,
+        )
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            when (destination.id) {
-                R.id.LoginFragment -> {
-                    // Logic to hide toolbar if needed, or other UI elements
-                }
-                else -> {
-                    // Default logic
-                }
-            }
+            if (destination.id in noToolbar) supportActionBar?.hide() else supportActionBar?.show()
         }
 
         if (savedInstanceState == null) openExpenseFrom(intent)

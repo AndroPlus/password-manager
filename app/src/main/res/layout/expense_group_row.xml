@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One transaction inside an expanded category: name, source + time, amount. -->
+<!-- One transaction inside an open category: name, source + time, amount. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
-    android:background="?attr/selectableItemBackground"
+    android:background="@color/white"
+    android:foreground="?attr/selectableItemBackground"
     android:gravity="center_vertical"
-    android:minHeight="52dp"
+    android:minHeight="56dp"
     android:orientation="horizontal"
-    android:paddingStart="28dp"
-    android:paddingEnd="12dp"
+    android:paddingStart="68dp"
+    android:paddingEnd="16dp"
     android:paddingVertical="8dp">
 
     <LinearLayout
@@ -24,14 +24,14 @@
             android:layout_height="wrap_content"
             android:ellipsize="end"
             android:maxLines="1"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="15sp" />
+            android:textColor="@color/ink"
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/rowSubtitleText"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="?android:attr/textColorSecondary"
+            android:textColor="@color/ink_muted"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -39,6 +39,6 @@
         android:id="@+id/rowAmountText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textSize="15sp"
-        android:textStyle="bold" />
+        android:fontFamily="sans-serif-medium"
+        android:textSize="14sp" />
 </LinearLayout>

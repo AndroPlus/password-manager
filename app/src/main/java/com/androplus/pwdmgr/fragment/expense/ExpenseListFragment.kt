@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.util.Pair as AndroidPair
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -19,46 +21,40 @@ import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.utils.DuplicateDetector
 import com.androplus.pwdmgr.utils.ExpenseGrouping
 import com.androplus.pwdmgr.utils.ExpenseRow
-import androidx.core.util.Pair as AndroidPair
 import com.google.android.material.datepicker.MaterialDatePicker
-import java.text.SimpleDateFormat
-import java.util.TimeZone
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import java.util.TimeZone
 
+/** Spending: every category as a card; tap one to see its payments. */
 class ExpenseListFragment : Fragment() {
 
     private var _binding: ExpenseListLayoutBinding? = null
     private val binding get() = _binding!!
     private lateinit var groupAdapter: ExpenseGroupAdapter
     private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
-    // Whole rupees in the summary card so large totals fit on one line.
-    private val summaryFormat = (NumberFormat.getCurrencyInstance(Locale("en", "IN")))
-        .apply { maximumFractionDigits = 0 }
+    private val summaryFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply { maximumFractionDigits = 0 }
 
     private var currentFilter = "THIS_MONTH"
+    private var loaded: List<ExpenseTransaction> = emptyList()
     // Chosen with the date picker: local start of the first day, end of the last day.
     private var customStart = 0L
     private var customEnd = 0L
     private val dayFormat = SimpleDateFormat("d MMM", Locale("en", "IN"))
-    private var loaded: List<ExpenseTransaction> = emptyList()
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = ExpenseListLayoutBinding.inflate(inflater, container, false)
         return binding.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ExpenseTabs.setup(this, binding.bottomNav, R.id.tab_spending)
         setupRecyclerView()
         setupListeners()
-        askNotificationPermission()
 
         // Reload whenever an expense is saved, including ones captured from SMS or
         // GPay/PhonePe while this screen is open. Also covers returning to it.
@@ -69,28 +65,10 @@ class ExpenseListFragment : Fragment() {
         }
     }
 
-    // The "which category is this new shop?" prompt is a notification (Android 13+ asks).
-    private val notificationPermission =
-        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
-
-    private fun askNotificationPermission() {
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
-        val permission = android.Manifest.permission.POST_NOTIFICATIONS
-        if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), permission)
-            != android.content.pm.PackageManager.PERMISSION_GRANTED
-        ) notificationPermission.launch(permission)
-    }
-
-    private fun updatePayeeBanner() {
-        val todo = PayeeSortFragment.unsorted()
-        if (todo.isEmpty()) {
-            binding.payeeBanner.visibility = View.GONE
-            return
-        }
-        val total = todo.sumOf { it.total }
-        binding.payeeBannerText.text = "${todo.size} shop(s)/people without a category " +
-            "(${summaryFormat.format(total)}). Tap to sort them once →"
-        binding.payeeBanner.visibility = View.VISIBLE
+    override fun onResume() {
+        super.onResume()
+        (activity as? AppCompatActivity)?.supportActionBar?.hide()
+        if (_binding != null) binding.bottomNav.selectedItemId = R.id.tab_spending
     }
 
     private fun setupRecyclerView() {
@@ -120,40 +98,20 @@ class ExpenseListFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        binding.fabAddExpense.setOnClickListener {
-            findNavController().navigate(R.id.ExpenseAddFragment)
-        }
-
+        binding.fabAddExpense.setOnClickListener { findNavController().navigate(R.id.ExpenseAddFragment) }
         binding.chipAllTime.setOnClickListener { setFilter("ALL") }
         binding.chipToday.setOnClickListener { setFilter("TODAY") }
         binding.chipThisMonth.setOnClickListener { setFilter("THIS_MONTH") }
         binding.chipLastMonth.setOnClickListener { setFilter("LAST_MONTH") }
         binding.chipPickDates.setOnClickListener { showDatePicker() }
-
-        binding.btnAnalytics.setOnClickListener {
-            findNavController().navigate(R.id.action_expense_list_to_analytics)
-        }
-
-        binding.payeeBanner.setOnClickListener {
-            findNavController().navigate(R.id.PayeeSortFragment)
-        }
-
-        binding.btnCategories.setOnClickListener {
-            findNavController().navigate(R.id.CategoryListFragment)
-        }
-
-        binding.btnBudgets.setOnClickListener {
-            findNavController().navigate(R.id.action_expense_list_to_budget)
-        }
+        binding.btnBudgets.setOnClickListener { findNavController().navigate(R.id.BudgetFragment) }
+        binding.btnCategories.setOnClickListener { findNavController().navigate(R.id.CategoryListFragment) }
     }
 
     /** Pick one day (tap it twice) or a range; the list then shows only those days. */
     private fun showDatePicker() {
-        val builder = MaterialDatePicker.Builder.dateRangePicker()
-            .setTitleText("Show transactions from")
-        if (currentFilter == "CUSTOM") {
-            builder.setSelection(AndroidPair(toUtcDay(customStart), toUtcDay(customEnd)))
-        }
+        val builder = MaterialDatePicker.Builder.dateRangePicker().setTitleText("Show transactions from")
+        if (currentFilter == "CUSTOM") builder.setSelection(AndroidPair(toUtcDay(customStart), toUtcDay(customEnd)))
         val picker = builder.build()
         picker.addOnPositiveButtonClickListener { sel ->
             val first = sel.first ?: return@addOnPositiveButtonClickListener
@@ -216,19 +174,10 @@ class ExpenseListFragment : Fragment() {
             "CUSTOM" -> realm.getExpensesByDateRange(customStart, customEnd)
             else -> realm.getAllExpenses()
         }
-
-        binding.summaryPeriodText.text = when (currentFilter) {
-            "TODAY" -> "Today"
-            "LAST_MONTH" -> "Last Month"
-            "ALL" -> "All Time"
-            "CUSTOM" -> customLabel()
-            else -> getString(R.string.this_month)
-        }
         val rows = loaded.map { it.toRow() }
         groupAdapter.submit(ExpenseGrouping.group(rows))
-        updateSummary(rows)
-        com.androplus.pwdmgr.services.AutoTransactionRecorder.init(requireContext())
-        updatePayeeBanner()
+        val (income, expense) = ExpenseGrouping.totals(rows)
+        binding.spendingTotalsText.text = "Spent ${summaryFormat.format(expense)} · Income ${summaryFormat.format(income)}"
         binding.chipPickDates.text = if (currentFilter == "CUSTOM") customLabel() else "Pick dates"
         syncChips()
         binding.emptyStateText.visibility = if (loaded.isEmpty()) View.VISIBLE else View.GONE
@@ -267,13 +216,6 @@ class ExpenseListFragment : Fragment() {
         categoryName = categoryName,
         categoryColor = categoryColor,
     )
-
-    private fun updateSummary(rows: List<ExpenseRow>) {
-        val (income, expense) = ExpenseGrouping.totals(rows)
-        binding.totalIncomeText.text = summaryFormat.format(income)
-        binding.totalExpenseText.text = summaryFormat.format(expense)
-        binding.balanceText.text = summaryFormat.format(income - expense)
-    }
 
     companion object {
         private const val DAY_MILLIS = 24L * 60 * 60 * 1000

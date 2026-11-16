@@ -55,10 +55,15 @@ object AutoTransactionRecorder {
      * Returns how many other entries were moved, or null when the name is too
      * generic to learn (e.g. "UPI payment").
      */
-    suspend fun learn(payee: String, isExpense: Boolean, categoryName: String): Int? = mutex.withLock {
+    suspend fun learn(
+        payee: String,
+        isExpense: Boolean,
+        categoryName: String,
+        remember: Boolean = true,   // false: only move these payments, don't file future ones
+    ): Int? = mutex.withLock {
         val mem = memory ?: return@withLock null
-        if (!mem.learn(payee, isExpense, categoryName)) return@withLock null
-        val key = CategoryMemory.key(payee, isExpense)
+        val key = CategoryMemory.key(payee, isExpense) ?: return@withLock null
+        if (remember && !mem.learn(payee, isExpense, categoryName)) return@withLock null
         val realmService = RealmService.getInstance()
         val cat = realmService.getAllCategories().find { it.name == categoryName } ?: return@withLock 0
         var moved = 0

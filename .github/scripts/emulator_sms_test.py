@@ -99,7 +99,7 @@ def main():
     # Some versions open on a PIN screen, others straight on the module menu.
     end = time.time() + 40
     while time.time() < end:
-        if find("expenseTrackerTile") is not None or find("expenseRecyclerView") is not None:
+        if find("expenseTrackerTile") is not None or find("homeSpentText") is not None:
             break
         if find("firstPinView") is not None:
             tap(find("firstPinView"))
@@ -107,12 +107,12 @@ def main():
             tap(wait_for("confirmPin"))
             adb("shell", "input", "text", PIN)
         time.sleep(1)
-    # The app opens straight on the Expense Tracker; older builds show a menu first.
-    if find("expenseRecyclerView") is None:
+    # The app opens straight on the Expense Tracker home; older builds show a menu first.
+    if find("homeSpentText") is None:
         tap(wait_for("expenseTrackerTile"))
-    wait_for("expenseRecyclerView")
+    wait_for("homeSpentText")
     time.sleep(2)
-    shot("1-expense-list-empty")
+    shot("1-home-empty")
 
     adb("logcat", "-c")
     send_sms("56767", "Rs 150.00 debited from a/c XX1234 to VPA swiggy@ybl UPI Ref 101. Avl bal: Rs 9,000 -Axis Bank")
@@ -125,6 +125,8 @@ def main():
     send_sms("9876543210", "Rs 500 paid to you for dinner, thanks")          # a person, not a bank
     send_sms("56767", "Rs 150.00 debited from a/c XX1234 to VPA swiggy@ybl UPI Ref 101. Avl bal: Rs 9,000 -Axis Bank")
     time.sleep(6)
+    adb("shell", "cmd", "statusbar", "collapse", check=False)   # hide "new payee" heads-up notifications
+    time.sleep(1)
 
     log = adb("logcat", "-d", "-s", "AutoTxnRecorder:D")
     saved = log.count("Saved SMS transaction: true")
@@ -133,20 +135,31 @@ def main():
     check(saved == 4, f"4 real transactions saved (got {saved})")
     check(dupes == 1, f"repeated SMS skipped as duplicate (got {dupes})")
 
-    # The list was open the whole time: it must have updated without reopening.
-    shot("2-expense-list-live-update")
+    # Home was open the whole time: totals must have updated without reopening.
+    shot("2-home-live-update")
+    spent = (find("homeSpentText").get("text") or "")
+    income = (find("homeIncomeText").get("text") or "")
+    print("home spent:", spent, "income:", income)
+    check(spent.replace("\u00a0", "") == "₹2,079", f"home shows spending 150 + 1,899 + 30 (got {spent!r})")
+    check("85,000" in income, f"home shows income (got {income!r})")
+    check(find("homePayeeBanner") is not None, "home asks to categorise new payees")
+
+    # Spending tab: category cards.
+    tap(wait_for(text="Spending"))
+    wait_for("expenseRecyclerView")
+    time.sleep(2)
     headers = [n.get("text") for n in ui_nodes() if n.get("resource-id", "").endswith(":id/groupNameText")]
     print("category groups:", headers)
     check("Shopping" in headers and headers.count("Shopping") == 1 and "Other" in headers,
           f"card UPI payment lands in Other, not Shopping (got {headers})")
     check({"Food & Dining", "Shopping", "Income"} <= set(headers),
-          f"grouped by category, list refreshed live (got {headers})")
+          f"grouped by category (got {headers})")
 
     tap(wait_for(text="Food & Dining"))
     time.sleep(1)
     tap(wait_for(text="Shopping"))
     time.sleep(1)
-    shot("3-categories-expanded")
+    shot("3-spending-expanded")
     texts = [n.get("text") or "" for n in ui_nodes()]
     check("Swiggy" in texts and "AMAZON" in texts, "expanded rows show clean names (Swiggy, AMAZON)")
     check(not any("debited" in t or "XX1234" in t for t in texts), "raw SMS text is not shown")
@@ -170,11 +183,40 @@ def main():
     adb("logcat", "-c")
     send_sms("56767", "Rs.499 spent on your Axis Bank Credit Card XX5678 at AMAZON")
     time.sleep(6)
+    adb("shell", "cmd", "statusbar", "collapse", check=False)
     headers = [n.get("text") for n in ui_nodes() if n.get("resource-id", "").endswith(":id/groupNameText")]
     print("category groups after learning:", headers)
     shot("4-learned-category")
     check("Cash" in headers and "Shopping" not in headers,
           f"new AMAZON SMS follows the category you chose (got {headers})")
+
+    # Home again: the new-payee sheet files payees one after another.
+    tap(wait_for(text="Home"))
+    wait_for("homeSpentText")
+    time.sleep(1)
+    tap(wait_for("homePayeeBanner"))
+    wait_for("sheetSave")
+    time.sleep(1)
+    shot("5-new-payee-sheet")
+    first = (find("sheetProgressText").get("text") or "")
+    print("sheet:", first)
+    tap(find("sheetSave"))
+    time.sleep(2)
+    after = find("sheetProgressText")
+    after_text = after.get("text") if after is not None else "(closed)"
+    print("sheet after save:", after_text)
+    check(first.startswith("1 of") and (after is None or after_text.startswith("2 of")),
+          f"sheet moves to the next payee after Save ({first!r} -> {after_text!r})")
+    adb("shell", "input", "keyevent", "4")
+    time.sleep(1)
+
+    # Insights tab.
+    tap(wait_for(text="Insights"))
+    wait_for("insightsBars")
+    time.sleep(2)
+    shot("6-insights")
+    texts = [n.get("text") or "" for n in ui_nodes()]
+    check(any("AMAZON" in t for t in texts), "insights lists most-paid payees")
 
     if failures:
         print(f"\n{len(failures)} check(s) failed")

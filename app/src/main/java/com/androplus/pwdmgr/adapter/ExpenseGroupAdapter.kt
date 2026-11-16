@@ -29,13 +29,14 @@ class ExpenseGroupAdapter(
     private sealed class Item {
         data class Header(val group: CategoryGroup, val expanded: Boolean) : Item()
         data class Row(val row: ExpenseRow) : Item()
+        data class Section(val title: String) : Item()
     }
 
     private var groups: List<CategoryGroup> = emptyList()
     private val expanded = mutableSetOf<String>()   // survives data refreshes
     private var items: List<Item> = emptyList()
 
-    private val currency = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
+    private val currency = NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply { maximumFractionDigits = 0 }
     private val timeFormat = SimpleDateFormat("d MMM, h:mm a", Locale.getDefault())
 
     fun submit(newGroups: List<CategoryGroup>) {
@@ -44,9 +45,11 @@ class ExpenseGroupAdapter(
     }
 
     private fun rebuild() {
-        items = groups.flatMap { g ->
+        val firstNotCounted = groups.indexOfFirst { !it.counted }
+        items = groups.flatMapIndexed { i, g ->
             val open = g.name in expanded
-            listOf<Item>(Item.Header(g, open)) + if (open) g.rows.map { Item.Row(it) } else emptyList()
+            val section = if (i == firstNotCounted) listOf<Item>(Item.Section("Not counted in spending")) else emptyList()
+            section + listOf<Item>(Item.Header(g, open)) + if (open) g.rows.map { Item.Row(it) } else emptyList()
         }
         notifyDataSetChanged()
     }
@@ -56,16 +59,20 @@ class ExpenseGroupAdapter(
         rebuild()
     }
 
-    override fun getItemViewType(position: Int) = if (items[position] is Item.Header) HEADER else ROW
+    override fun getItemViewType(position: Int) = when (items[position]) {
+        is Item.Header -> HEADER
+        is Item.Row -> ROW
+        is Item.Section -> SECTION
+    }
 
     override fun getItemCount() = items.size
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val inflater = LayoutInflater.from(parent.context)
-        return if (viewType == HEADER) {
-            HeaderHolder(inflater.inflate(R.layout.expense_group_header, parent, false))
-        } else {
-            RowHolder(inflater.inflate(R.layout.expense_group_row, parent, false))
+        return when (viewType) {
+            HEADER -> HeaderHolder(inflater.inflate(R.layout.expense_group_header, parent, false))
+            SECTION -> object : RecyclerView.ViewHolder(inflater.inflate(R.layout.expense_group_section, parent, false)) {}
+            else -> RowHolder(inflater.inflate(R.layout.expense_group_row, parent, false))
         }
     }
 
@@ -73,6 +80,7 @@ class ExpenseGroupAdapter(
         when (val item = items[position]) {
             is Item.Header -> (holder as HeaderHolder).bind(item.group, item.expanded)
             is Item.Row -> (holder as RowHolder).bind(item.row)
+            is Item.Section -> (holder.itemView as TextView).text = item.title
         }
     }
 
@@ -80,7 +88,7 @@ class ExpenseGroupAdapter(
         try { Color.parseColor(hex) } catch (e: IllegalArgumentException) { Color.parseColor("#0D47A1") }
 
     private inner class HeaderHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val dot: View = view.findViewById(R.id.groupColorDot)
+        private val dot: TextView = view.findViewById(R.id.groupColorDot)
         private val name: TextView = view.findViewById(R.id.groupNameText)
         private val count: TextView = view.findViewById(R.id.groupCountText)
         private val total: TextView = view.findViewById(R.id.groupTotalText)
@@ -88,22 +96,27 @@ class ExpenseGroupAdapter(
 
         fun bind(group: CategoryGroup, isOpen: Boolean) {
             val ctx = itemView.context
-            dot.backgroundTintList = ColorStateList.valueOf(parseColor(group.color))
+            val color = parseColor(group.color)
+            // Soft tint of the category colour behind its initial, in the colour itself.
+            dot.backgroundTintList = ColorStateList.valueOf((color and 0x00FFFFFF) or 0x2E000000)
+            dot.setTextColor(darken(color))
+            dot.text = group.name.take(1).uppercase()
             name.text = group.name
             val n = group.rows.size
-            count.text = (if (n == 1) "1 transaction" else "$n transactions") +
-                if (group.counted) "" else " · not counted in totals"
+            count.text = if (n == 1) "1 payment" else "$n payments"
             if (!group.counted) {
                 total.text = currency.format(group.spent + group.received)
-                total.setTextColor(ctx.getColor(android.R.color.darker_gray))
+                total.setTextColor(ctx.getColor(R.color.ink_muted))
             } else if (group.spent > 0 || group.received == 0.0) {
                 total.text = currency.format(group.spent)
-                total.setTextColor(ctx.getColor(R.color.expense_red))
+                total.setTextColor(ctx.getColor(R.color.ink))
             } else {
                 total.text = "+" + currency.format(group.received)
-                total.setTextColor(ctx.getColor(R.color.income_green))
+                total.setTextColor(ctx.getColor(R.color.accent))
             }
-            chevron.rotation = if (isOpen) 180f else 0f
+            chevron.rotation = if (isOpen) 270f else 90f
+            itemView.contentDescription = "${group.name}, ${total.text}, ${count.text}. " +
+                if (isOpen) "Tap to hide payments" else "Tap to show payments"
             itemView.setOnClickListener { toggle(group.name) }
         }
     }
@@ -123,14 +136,24 @@ class ExpenseGroupAdapter(
                 else -> "$time · via ${row.source}"
             }
             amount.text = (if (row.isIncome) "+" else "−") + currency.format(row.amount)
-            amount.setTextColor(ctx.getColor(if (row.isIncome) R.color.income_green else R.color.expense_red))
+            amount.setTextColor(ctx.getColor(if (row.isIncome) R.color.accent else R.color.ink))
             itemView.setOnClickListener { onRowClick(row) }
             itemView.setOnLongClickListener { onRowLongClick(row); true }
         }
     }
 
+    /** Readable text colour from a light category colour. */
+    private fun darken(c: Int): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(c, hsv)
+        hsv[1] = maxOf(hsv[1], 0.5f)
+        hsv[2] = minOf(hsv[2], 0.5f)
+        return Color.HSVToColor(hsv)
+    }
+
     companion object {
         private const val HEADER = 0
         private const val ROW = 1
+        private const val SECTION = 2
     }
 }

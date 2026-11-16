@@ -54,15 +54,7 @@ class LoginFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
     }
 
-    override fun onResume() {
-        super.onResume()
-        (activity as? AppCompatActivity)?.supportActionBar?.hide()
-    }
 
-    override fun onStop() {
-        super.onStop()
-        (activity as? AppCompatActivity)?.supportActionBar?.show()
-    }
 
     fun setupUI() {
         val loginData = RealmService.getInstance().getLoginData()

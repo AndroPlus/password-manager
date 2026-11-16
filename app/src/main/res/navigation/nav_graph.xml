@@ -15,7 +15,7 @@
             app:destination="@id/LoginFragment" />
         <action
             android:id="@+id/action_selection_to_expenses"
-            app:destination="@id/ExpenseListFragment" />
+            app:destination="@id/ExpenseHomeFragment" />
         <action
             android:id="@+id/action_selection_to_todo"
             app:destination="@id/TodoListFragment" />
@@ -51,7 +51,19 @@
         tools:layout="@layout/apps_create_layout"
         android:label="@string/app_create" />
 
-    <!-- Expense Tracker Module -->
+    <!-- Expense Tracker Module: Home, Spending, Insights tabs -->
+    <fragment
+        android:id="@+id/ExpenseHomeFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.ExpenseHomeFragment"
+        android:label="Home"
+        tools:layout="@layout/fragment_expense_home" />
+
+    <fragment
+        android:id="@+id/InsightsFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.InsightsFragment"
+        android:label="Insights"
+        tools:layout="@layout/fragment_insights" />
+
     <fragment
         android:id="@+id/ExpenseListFragment"
         android:name="com.androplus.pwdmgr.fragment.expense.ExpenseListFragment"
