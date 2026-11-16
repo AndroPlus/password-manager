@@ -22,6 +22,21 @@ android {
         }
     }
 
+    // CI signs the side-by-side test build with a fixed key when the
+    // DEBUG_KEYSTORE_B64 secret exists, so each new APK installs as an update.
+    // Without it, every CI runner signs with a fresh random debug key.
+    val ciKeystore = System.getenv("CI_KEYSTORE_PATH")
+    signingConfigs {
+        if (ciKeystore != null) {
+            create("ciDebug") {
+                storeFile = file(ciKeystore)
+                storePassword = System.getenv("CI_KEYSTORE_PASSWORD")
+                keyAlias = "pwdmgrnew"
+                keyPassword = System.getenv("CI_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -29,6 +44,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            manifestPlaceholders["appLabel"] = "@string/app_name"
+        }
+        // A separate app ID so this build installs next to the existing Password
+        // Manager instead of replacing it; each app keeps its own data.
+        debug {
+            applicationIdSuffix = ".newapp"
+            versionNameSuffix = "-new"
+            manifestPlaceholders["appLabel"] = "Expense Tracker"
+            if (ciKeystore != null) signingConfig = signingConfigs.getByName("ciDebug")
         }
 
     }

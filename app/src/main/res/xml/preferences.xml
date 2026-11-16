@@ -13,6 +13,74 @@
             android:key="payment_app_tracking_enabled"
             android:summary="Track expenses from GPay, PhonePe notifications"
             android:title="Payment App Tracking" />
+
+        <Preference
+            android:key="notification_access_status"
+            android:title="Notification access" />
+
+        <Preference
+            android:key="seen_notifications"
+            android:summary="Payment-app notifications this app has received, and how each was read"
+            android:title="Recent payment notifications" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="ask_category_for_new_payees"
+            android:summary="When you pay a new shop or person, a notification asks its category once"
+            android:title="Ask category for new payees" />
+
+        <EditTextPreference
+            android:defaultValue="200"
+            android:dependency="ask_category_for_new_payees"
+            android:dialogMessage="Smaller payments to new payees wait in the Home banner instead of notifying you."
+            android:key="prompt_min_amount"
+            android:title="Notify only for payments of at least (₹)" />
+
+        <Preference
+            android:key="payee_sort"
+            android:summary="Give each shop / person you paid a category, biggest spend first"
+            android:title="Sort your payees" />
+
+        <Preference
+            android:key="learned_categories"
+            android:title="Learned categories" />
+
+        <Preference
+            android:key="recheck_categories"
+            android:summary="Re-read auto-captured transactions with the latest rules"
+            android:title="Re-check categories" />
+
+        <Preference
+            android:key="import_past_sms"
+            android:summary="Add transactions from bank SMS already on this phone"
+            android:title="Import past SMS" />
+    </PreferenceCategory>
+
+    <PreferenceCategory android:title="Server sync (FinIntel)">
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="server_sync_enabled"
+            android:summary="Also send bank SMS and payment notifications to your FinIntel server. OTPs are never sent."
+            android:title="Send to server" />
+
+        <EditTextPreference
+            android:dependency="server_sync_enabled"
+            android:key="server_url"
+            android:title="Server URL"
+            android:summary="e.g. https://finintel-xxxx.onrender.com"
+            android:dialogMessage="Copy it from the FinIntel Accounts page. Must start with https://" />
+
+        <EditTextPreference
+            android:dependency="server_sync_enabled"
+            android:key="server_token"
+            android:title="Upload token"
+            android:summary="Not set"
+            android:dialogMessage="Copy it from the FinIntel Accounts page." />
+
+        <Preference
+            android:dependency="server_sync_enabled"
+            android:key="server_sync_now"
+            android:title="Sync now" />
     </PreferenceCategory>
 
     <PreferenceCategory android:title="General">

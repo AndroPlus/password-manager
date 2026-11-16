@@ -1,71 +1,71 @@
 package com.androplus.pwdmgr.services
 
+import android.content.ComponentName
+import android.content.Context
+import android.os.Build
+import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Log
 import androidx.preference.PreferenceManager
-import com.androplus.pwdmgr.model.ExpenseTransaction
+import com.androplus.pwdmgr.utils.NotificationLog
+import com.androplus.pwdmgr.utils.SeenNotification
 import com.androplus.pwdmgr.utils.TransactionParser
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import java.io.File
 
 class TransactionNotificationListener : NotificationListenerService() {
 
-    private val supportedPackages = setOf(
-        "com.google.android.apps.nbu.paisa.user", // Google Pay (GPay)
-        "com.phonepe.app" // PhonePe
-    )
+    companion object {
+        val sourceByPackage = mapOf(
+            "com.google.android.apps.nbu.paisa.user" to "GPay",
+            "com.phonepe.app" to "PhonePe",
+            "net.one97.paytm" to "Paytm",
+        )
+
+        /** Recent payment-app notifications, kept on the phone only. */
+        fun log(context: Context) = NotificationLog(File(context.filesDir, "seen_notifications.jsonl"))
+
+        fun hasAccess(context: Context): Boolean {
+            val enabled = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+            return enabled?.contains(context.packageName) == true
+        }
+
+        /** Asks Android to reconnect the listener, e.g. after access was re-granted. */
+        fun rebind(context: Context) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                NotificationListenerService.requestRebind(ComponentName(context, TransactionNotificationListener::class.java))
+            }
+        }
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        if (!isTrackingEnabled()) return
+        val source = sourceByPackage[sbn.packageName] ?: return
 
-        val packageName = sbn.packageName
-        if (packageName in supportedPackages) {
-            val notification = sbn.notification
-            val title = notification.extras.getString("android.title") ?: ""
-            val text = notification.extras.getCharSequence("android.text")?.toString() ?: ""
+        val extras = sbn.notification?.extras ?: return
+        // Titles are often styled text (SpannableString), which getString() returns as null.
+        val title = extras.getCharSequence("android.title")?.toString() ?: ""
+        val text = (extras.getCharSequence("android.bigText") ?: extras.getCharSequence("android.text"))
+            ?.toString() ?: ""
 
-            Log.d("NotificationListener", "Notification from $packageName: $title - $text")
+        if (!isTrackingEnabled()) {
+            remember(source, title, text, "tracking is off")
+            return
+        }
 
-            val fullContent = "$title $text"
-            val parsed = TransactionParser.parseSms(fullContent) // Reuse SMS parser for now
+        ServerSync.submit(this, "notification", source, title, text, sbn.postTime)
 
-            if (parsed != null) {
-                saveTransaction(parsed.amount, parsed.merchant, text, parsed.isExpense)
-            }
+        val parsed = TransactionParser.parseNotification(title, text)
+        remember(source, title, text, if (parsed != null) "recorded ₹${parsed.amount}" else "not a payment")
+        if (parsed != null) AutoTransactionRecorder.record(parsed, source, "$title\n$text")
+    }
+
+    private fun remember(source: String, title: String, text: String, outcome: String) {
+        runCatching {
+            log(this).add(SeenNotification(System.currentTimeMillis(), source, title, text, outcome))
         }
     }
 
     private fun isTrackingEnabled(): Boolean {
         val sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this)
         return sharedPrefs.getBoolean("payment_app_tracking_enabled", false)
-    }
-
-    private fun saveTransaction(amount: Double, merchant: String, fullDescription: String, isExpense: Boolean) {
-        val type = if (isExpense) "EXPENSE" else "INCOME"
-
-        val realmService = RealmService.getInstance()
-        val categories = realmService.getAllCategories()
-        val defaultCategory = categories.find { it.name.contains("Shopping", true) || it.name.contains("Other", true) } 
-            ?: categories.firstOrNull()
-
-        val expense = ExpenseTransaction().apply {
-            this.amount = amount
-            this.shortDescription = "[Auto] $merchant"
-            this.description = fullDescription
-            this.type = type
-            this.date = System.currentTimeMillis()
-            if (defaultCategory != null) {
-                this.categoryId = defaultCategory._id.toHexString()
-                this.categoryName = defaultCategory.name
-                this.categoryColor = defaultCategory.color
-            }
-        }
-
-        CoroutineScope(Dispatchers.IO).launch {
-            val success = realmService.createExpense(expense)
-            Log.d("NotificationListener", "Saved automated transaction: $success")
-        }
     }
 }

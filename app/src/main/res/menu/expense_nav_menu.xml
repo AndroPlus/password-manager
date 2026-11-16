@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/tab_home" android:icon="@drawable/ic_nav_home" android:title="Home" />
+    <item android:id="@+id/tab_spending" android:icon="@drawable/ic_nav_spending" android:title="Spending" />
+    <item android:id="@+id/tab_insights" android:icon="@drawable/ic_nav_insights" android:title="Insights" />
+    <item android:id="@+id/tab_more" android:icon="@drawable/ic_nav_more" android:title="More" />
+</menu>

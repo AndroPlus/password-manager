@@ -29,4 +29,24 @@
     <color name="category_healthcare">#AA96DA</color>
     <color name="category_shopping">#FCBAD3</color>
     <color name="category_income">#4CAF50</color>
+
+    <!-- Redesign palette -->
+    <color name="ink">#FF14161A</color>
+    <color name="ink_muted">#FF5F6368</color>
+    <color name="ink_soft">#FF3C4043</color>
+    <color name="surface">#FFF5F6F8</color>
+    <color name="hairline">#FFEEF0F2</color>
+    <color name="outline">#FFDADDE2</color>
+    <color name="accent">#FF0F766E</color>
+    <color name="accent_dark">#FF115E59</color>
+    <color name="accent_soft">#FFE6F4F1</color>
+    <color name="hero_track">#FF2E3238</color>
+    <color name="hero_label">#FFC4C9D0</color>
+    <color name="mint">#FF5EEAD4</color>
+    <color name="warn_bg">#FFFFF4E5</color>
+    <color name="warn_fg">#FF7A3E00</color>
+    <color name="warn_bar">#FFD97706</color>
+    <!-- Theme text colours must be named resources: the bottom bar reads them by id. -->
+    <color name="text_secondary_day">#8A000000</color>
+    <color name="text_secondary_night">#B3FFFFFF</color>
 </resources>
