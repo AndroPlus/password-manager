@@ -45,4 +45,7 @@
     <color name="warn_bg">#FFFFF4E5</color>
     <color name="warn_fg">#FF7A3E00</color>
     <color name="warn_bar">#FFD97706</color>
+    <!-- Theme text colours must be named resources: the bottom bar reads them by id. -->
+    <color name="text_secondary_day">#8A000000</color>
+    <color name="text_secondary_night">#B3FFFFFF</color>
 </resources>
