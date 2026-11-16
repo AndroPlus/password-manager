@@ -49,7 +49,7 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
         // Visibility logic
         // Screens that draw their own header have no toolbar.
         val noToolbar = setOf(
-            R.id.ModuleSelectionFragment, R.id.LoginFragment,
+            R.id.ModuleSelectionFragment, R.id.LoginFragment, R.id.OnboardingFragment,
             R.id.ExpenseHomeFragment, R.id.ExpenseListFragment, R.id.InsightsFragment,
         )
         navController.addOnDestinationChangedListener { _, destination, _ ->

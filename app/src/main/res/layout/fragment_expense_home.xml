@@ -145,6 +145,7 @@
 
                     <TextView
                         android:id="@+id/homeDailyText"
+                        android:background="?attr/selectableItemBackground"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -221,19 +222,27 @@
                 </LinearLayout>
 
                 <LinearLayout
+                    android:id="@+id/homeNotCountedTile"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:background="@drawable/bg_tile"
+                    android:clickable="true"
+                    android:contentDescription="Not counted: card bills and your own transfers. Tap for details."
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
                     android:orientation="vertical"
                     android:padding="12dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:drawablePadding="4dp"
                         android:text="Not counted"
                         android:textColor="@color/ink_muted"
-                        android:textSize="12sp" />
+                        android:textSize="12sp"
+                        app:drawableEndCompat="@drawable/ic_info"
+                        app:drawableTint="@color/ink_muted" />
 
                     <TextView
                         android:id="@+id/homeNotCountedText"

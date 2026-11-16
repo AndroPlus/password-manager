@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -65,15 +64,46 @@ class ExpenseAddFragment : Fragment() {
         handleArguments()
     }
 
+    private var selectedCategoryIndex = 0
+    // "SMS", "GPay"…: kept on save so an edited auto entry stays recognisable.
+    private var sourceTag: String? = null
+
+    /** Every category as a tappable chip with its icon. */
     private fun loadCategories() {
         categories = RealmService.getInstance().getAllCategories()
-        val adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_item,
-            categories.map { it.name }
-        )
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        binding.categorySpinner.adapter = adapter
+        val group = binding.categoryChips
+        group.removeAllViews()
+        categories.forEachIndexed { i, cat ->
+            val color = com.androplus.pwdmgr.ui.CategoryStyle.color(cat.color)
+            val chip = com.google.android.material.chip.Chip(requireContext()).apply {
+                id = View.generateViewId()
+                text = cat.name
+                isCheckable = true
+                isCheckedIconVisible = false
+                chipIcon = androidx.core.content.ContextCompat.getDrawable(
+                    requireContext(), com.androplus.pwdmgr.ui.CategoryStyle.icon(cat.name))
+                chipIconTint = android.content.res.ColorStateList.valueOf(com.androplus.pwdmgr.ui.CategoryStyle.ink(color))
+                isChipIconVisible = true
+                chipBackgroundColor = android.content.res.ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(com.androplus.pwdmgr.ui.CategoryStyle.tint(color), android.graphics.Color.WHITE))
+                chipStrokeWidth = resources.displayMetrics.density
+                chipStrokeColor = android.content.res.ColorStateList(
+                    arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+                    intArrayOf(com.androplus.pwdmgr.ui.CategoryStyle.ink(color), requireContext().getColor(R.color.outline)))
+                setTextColor(requireContext().getColor(R.color.ink))
+                tag = i
+                setOnClickListener { selectedCategoryIndex = i }
+            }
+            group.addView(chip)
+        }
+        selectCategory(categories.indexOfFirst { it.name == "Other" }.takeIf { it >= 0 } ?: 0)
+    }
+
+    private fun selectCategory(index: Int) {
+        if (index !in categories.indices) return
+        selectedCategoryIndex = index
+        (binding.categoryChips.getChildAt(index) as? com.google.android.material.chip.Chip)?.isChecked = true
     }
 
     private fun setupUI() {
@@ -101,7 +131,10 @@ class ExpenseAddFragment : Fragment() {
                 originalCategoryName = expense.categoryName
                 binding.amountEditText.setText(expense.amount.toString())
                 binding.descriptionEditText.setText(expense.description)
-                binding.shortDescriptionEditText.setText(expense.shortDescription)
+                sourceTag = DuplicateDetector.sourceOf(expense.shortDescription)
+                binding.shortDescriptionEditText.setText(
+                    expense.shortDescription.replace(Regex("""^\[[A-Za-z]+]\s*"""), ""))
+                if (sourceTag != null) binding.descriptionLayout.hint = "Original message"
                 selectedCalendar.timeInMillis = expense.date
                 binding.dateButton.text = dateFormat.format(selectedCalendar.time)
                 
@@ -120,9 +153,8 @@ class ExpenseAddFragment : Fragment() {
                 }
 
                 val catIndex = categories.indexOfFirst { it._id.toHexString() == expense.categoryId }
-                if (catIndex != -1) {
-                    binding.categorySpinner.setSelection(catIndex)
-                }
+                    .takeIf { it >= 0 } ?: categories.indexOfFirst { it.name == expense.categoryName }
+                if (catIndex != -1) selectCategory(catIndex)
                 
                 binding.saveButton.text = getString(R.string.save)
             }
@@ -150,9 +182,13 @@ class ExpenseAddFragment : Fragment() {
         }
 
         val amount = amountStr.toDoubleOrNull() ?: 0.0
-        val category = categories[binding.categorySpinner.selectedItemPosition]
+        val category = categories.getOrNull(selectedCategoryIndex) ?: run {
+            Toast.makeText(context, "Pick a category", Toast.LENGTH_SHORT).show()
+            return
+        }
         val description = binding.descriptionEditText.text.toString()
-        val shortDescription = binding.shortDescriptionEditText.text.toString()
+        val typedName = binding.shortDescriptionEditText.text.toString().trim()
+        val shortDescription = sourceTag?.let { DuplicateDetector.tag(it, typedName) } ?: typedName
         val type = if (binding.radioIncome.isChecked) "INCOME" else "EXPENSE"
 
         val expenseToSave = ExpenseTransaction().apply {

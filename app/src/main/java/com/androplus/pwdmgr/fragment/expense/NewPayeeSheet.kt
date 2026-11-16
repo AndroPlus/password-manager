@@ -15,6 +15,7 @@ import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.databinding.SheetNewPayeeBinding
 import com.androplus.pwdmgr.services.AutoTransactionRecorder
 import com.androplus.pwdmgr.services.RealmService
+import com.androplus.pwdmgr.ui.CategoryStyle
 import com.androplus.pwdmgr.utils.PayeeSorting
 import com.androplus.pwdmgr.utils.PayeeSummary
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -104,10 +105,19 @@ class NewPayeeSheet : BottomSheetDialogFragment() {
             val tv = TextView(requireContext()).apply {
                 text = label
                 gravity = Gravity.CENTER
-                textSize = 13f
-                maxLines = 2
-                setPadding(gap / 2, 0, gap / 2, 0)
-                setTextColor(requireContext().getColor(if (on) R.color.accent else R.color.ink_soft))
+                textSize = 12f
+                maxLines = 1
+                ellipsize = android.text.TextUtils.TruncateAt.END
+                setPadding(gap / 2, gap / 2, gap / 2, gap / 3)
+                val textColor = requireContext().getColor(if (on) R.color.accent else R.color.ink_soft)
+                setTextColor(textColor)
+                val icon = androidx.core.content.ContextCompat.getDrawable(
+                    requireContext(), if (isMore) R.drawable.ic_cat_other else CategoryStyle.icon(label))?.mutate()
+                icon?.setTint(textColor)
+                val size = (22 * resources.displayMetrics.density).toInt()
+                icon?.setBounds(0, 0, size, size)
+                setCompoundDrawables(null, icon, null, null)
+                compoundDrawablePadding = gap / 3
                 setBackgroundResource(if (on) R.drawable.bg_choice_selected else R.drawable.bg_choice)
                 isClickable = true
                 isFocusable = true

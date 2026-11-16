@@ -114,15 +114,20 @@ class InsightsFragment : Fragment() {
             })
         }
 
-        val withIncome = bars.filter { it.earned > 0 }
+        // Judge only finished months; a half-over month makes any ratio misleading.
+        val finished = bars.dropLast(1).filter { it.spent > 0 || it.earned > 0 }
+        val current = bars.last()
         binding.insightsSummary.text = when {
             bars.all { it.spent == 0.0 && it.earned == 0.0 } -> "No transactions in the last 6 months yet."
-            withIncome.isEmpty() -> "Highest spending: ${bars.maxBy { it.spent }.label} (${money.format(bars.maxOf { it.spent })})."
+            finished.size < 2 ->
+                "Insights get sharper after two full months of data. So far in ${current.label}: " +
+                    "${money.format(current.spent)} spent, ${money.format(current.earned)} earned."
             else -> {
-                val kept = withIncome.sumOf { it.earned - it.spent } / withIncome.sumOf { it.earned } * 100
-                val top = bars.maxBy { it.spent }
-                "You kept ${kept.toInt()}% of your income in months with income. " +
-                    "Highest spending: ${top.label} (${money.format(top.spent)})."
+                val earned = finished.sumOf { it.earned }
+                val top = finished.maxBy { it.spent }
+                val kept = if (earned > 0) "You kept ${((earned - finished.sumOf { it.spent }) / earned * 100).toInt()}% " +
+                    "of your income over the last ${finished.size} full months. " else ""
+                kept + "Highest spending: ${top.label} (${money.format(top.spent)})."
             }
         }
     }

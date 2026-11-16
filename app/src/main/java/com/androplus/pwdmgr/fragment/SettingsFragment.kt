@@ -55,6 +55,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
         setupServerSyncPreferences()
+        findPreference<EditTextPreference>("prompt_min_amount")?.apply {
+            setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER }
+            summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
+                "₹" + (p.text?.takeIf { it.isNotBlank() } ?: "200")
+            }
+        }
     }
 
     override fun onResume() {

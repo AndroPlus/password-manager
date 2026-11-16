@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.databinding.FragmentExpenseHomeBinding
+import com.androplus.pwdmgr.services.AppPrefs
 import com.androplus.pwdmgr.services.AutoTransactionRecorder
 import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.utils.DuplicateDetector
@@ -63,7 +64,17 @@ class ExpenseHomeFragment : Fragment() {
         binding.homeDatesButton.setOnClickListener { pickDates() }
         binding.homeAddButton.setOnClickListener { findNavController().navigate(R.id.ExpenseAddFragment) }
         binding.homeAllCategories.setOnClickListener { binding.bottomNav.selectedItemId = R.id.tab_spending }
-        binding.homeBudgetText.setOnClickListener { findNavController().navigate(R.id.BudgetFragment) }
+        binding.homeBudgetText.setOnClickListener { editBudget() }
+        binding.homeDailyText.setOnClickListener { if (AppPrefs.monthlyBudget(requireContext()) == null) editBudget() }
+        binding.homeNotCountedTile.setOnClickListener {
+            android.app.AlertDialog.Builder(requireContext())
+                .setTitle("Not counted")
+                .setMessage("Credit-card bill payments and money moved between your own accounts.\n\n" +
+                    "They aren't spending: the card purchases themselves are already counted, and a " +
+                    "transfer to yourself only moves money. So they're kept out of your totals.")
+                .setPositiveButton("OK", null)
+                .show()
+        }
         binding.homePayeeBanner.setOnClickListener {
             NewPayeeSheet().show(childFragmentManager, NewPayeeSheet.TAG)
         }
@@ -106,7 +117,8 @@ class ExpenseHomeFragment : Fragment() {
         val (start, end) = period(now)
         val realm = RealmService.getInstance()
         val rows = realm.getExpensesByDateRange(start, end).map { it.toRow() }
-        val budget = realm.getAllBudgets().sumOf { it.amount }.takeIf { it > 0 }
+        val budget = AppPrefs.monthlyBudget(requireContext())
+            ?: realm.getAllBudgets().sumOf { it.amount }.takeIf { it > 0 }
         val stats = HomeStatsCalc.compute(rows, budget, now, start, end)
 
         // Header
@@ -143,11 +155,10 @@ class ExpenseHomeFragment : Fragment() {
                 else -> "${money.format(stats.budget - stats.spent)} under budget"
             }
         } else {
-            binding.homeBudgetText.text = "Set a budget ›"
+            binding.homeBudgetText.text = ""
             binding.homeBudgetProgress.visibility = View.GONE
             binding.homeUsedText.text = ""
-            binding.homeDailyText.text = if (stats.top.isNotEmpty())
-                "${stats.top.size} categories · ${rows.count { !it.isIncome }} payments" else ""
+            binding.homeDailyText.text = "Set a monthly budget to see what you can spend per day ›"
         }
 
         // Tiles
@@ -221,6 +232,29 @@ class ExpenseHomeFragment : Fragment() {
             }
             binding.homeRecentList.addView(row)
         }
+    }
+
+    /** One number for the whole month; per-category budgets stay under More › Budgets. */
+    private fun editBudget() {
+        val ctx = requireContext()
+        val input = android.widget.EditText(ctx).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            hint = "e.g. 40000"
+            AppPrefs.monthlyBudget(ctx)?.let { setText(it.toLong().toString()) }
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.FrameLayout(ctx).apply { setPadding(pad, pad / 2, pad, 0); addView(input) }
+        android.app.AlertDialog.Builder(ctx)
+            .setTitle("Monthly budget (₹)")
+            .setMessage("How much do you want to spend in a month? Home then shows what's left per day.")
+            .setView(box)
+            .setPositiveButton("Save") { _, _ ->
+                AppPrefs.setMonthlyBudget(ctx, input.text.toString().toDoubleOrNull())
+                load()
+            }
+            .setNeutralButton("Remove") { _, _ -> AppPrefs.setMonthlyBudget(ctx, null); load() }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun pickDates() {

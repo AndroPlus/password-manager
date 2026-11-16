@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.androplus.pwdmgr.R
+import com.androplus.pwdmgr.ui.CategoryStyle
 import com.androplus.pwdmgr.utils.CategoryGroup
 import com.androplus.pwdmgr.utils.ExpenseRow
 import java.text.NumberFormat
@@ -28,7 +29,7 @@ class ExpenseGroupAdapter(
 
     private sealed class Item {
         data class Header(val group: CategoryGroup, val expanded: Boolean) : Item()
-        data class Row(val row: ExpenseRow) : Item()
+        data class Row(val row: ExpenseRow, val last: Boolean) : Item()
         data class Section(val title: String) : Item()
     }
 
@@ -49,7 +50,7 @@ class ExpenseGroupAdapter(
         items = groups.flatMapIndexed { i, g ->
             val open = g.name in expanded
             val section = if (i == firstNotCounted) listOf<Item>(Item.Section("Not counted in spending")) else emptyList()
-            section + listOf<Item>(Item.Header(g, open)) + if (open) g.rows.map { Item.Row(it) } else emptyList()
+            section + listOf<Item>(Item.Header(g, open)) + if (open) g.rows.mapIndexed { j, r -> Item.Row(r, j == g.rows.lastIndex) } else emptyList()
         }
         notifyDataSetChanged()
     }
@@ -79,7 +80,7 @@ class ExpenseGroupAdapter(
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         when (val item = items[position]) {
             is Item.Header -> (holder as HeaderHolder).bind(item.group, item.expanded)
-            is Item.Row -> (holder as RowHolder).bind(item.row)
+            is Item.Row -> (holder as RowHolder).bind(item.row, item.last)
             is Item.Section -> (holder.itemView as TextView).text = item.title
         }
     }
@@ -88,7 +89,7 @@ class ExpenseGroupAdapter(
         try { Color.parseColor(hex) } catch (e: IllegalArgumentException) { Color.parseColor("#0D47A1") }
 
     private inner class HeaderHolder(view: View) : RecyclerView.ViewHolder(view) {
-        private val dot: TextView = view.findViewById(R.id.groupColorDot)
+        private val dot: ImageView = view.findViewById(R.id.groupColorDot)
         private val name: TextView = view.findViewById(R.id.groupNameText)
         private val count: TextView = view.findViewById(R.id.groupCountText)
         private val total: TextView = view.findViewById(R.id.groupTotalText)
@@ -97,10 +98,12 @@ class ExpenseGroupAdapter(
         fun bind(group: CategoryGroup, isOpen: Boolean) {
             val ctx = itemView.context
             val color = parseColor(group.color)
-            // Soft tint of the category colour behind its initial, in the colour itself.
-            dot.backgroundTintList = ColorStateList.valueOf((color and 0x00FFFFFF) or 0x2E000000)
-            dot.setTextColor(darken(color))
-            dot.text = group.name.take(1).uppercase()
+            // Category icon in its colour, on a soft tint of that colour.
+            dot.backgroundTintList = ColorStateList.valueOf(CategoryStyle.tint(color))
+            dot.setImageResource(CategoryStyle.icon(group.name))
+            dot.imageTintList = ColorStateList.valueOf(CategoryStyle.ink(color))
+            // Open: the card continues into its payments below.
+            itemView.setBackgroundResource(if (isOpen && group.rows.isNotEmpty()) R.drawable.bg_card_top else R.drawable.bg_card)
             name.text = group.name
             val n = group.rows.size
             count.text = if (n == 1) "1 payment" else "$n payments"
@@ -126,8 +129,9 @@ class ExpenseGroupAdapter(
         private val subtitle: TextView = view.findViewById(R.id.rowSubtitleText)
         private val amount: TextView = view.findViewById(R.id.rowAmountText)
 
-        fun bind(row: ExpenseRow) {
+        fun bind(row: ExpenseRow, last: Boolean) {
             val ctx = itemView.context
+            itemView.setBackgroundResource(if (last) R.drawable.bg_card_bottom else R.drawable.bg_card_middle)
             title.text = row.title
             val time = timeFormat.format(Date(row.timeMillis))
             subtitle.text = when (row.source) {

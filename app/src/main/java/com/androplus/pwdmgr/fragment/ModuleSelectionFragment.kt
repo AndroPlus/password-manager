@@ -43,7 +43,11 @@ class ModuleSelectionFragment : Fragment() {
         // starts. Back from it returns here for Todo List and Password Manager.
         if (!openedExpensesAtLaunch) {
             openedExpensesAtLaunch = true
-            findNavController().navigate(R.id.action_selection_to_expenses)
+            if (com.androplus.pwdmgr.services.AppPrefs.onboardingDone(requireContext())) {
+                findNavController().navigate(R.id.action_selection_to_expenses)
+            } else {
+                findNavController().navigate(R.id.OnboardingFragment)
+            }
         }
     }
 

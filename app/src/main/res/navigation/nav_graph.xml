@@ -59,6 +59,12 @@
         tools:layout="@layout/fragment_expense_home" />
 
     <fragment
+        android:id="@+id/OnboardingFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.OnboardingFragment"
+        android:label="Welcome"
+        tools:layout="@layout/fragment_onboarding" />
+
+    <fragment
         android:id="@+id/InsightsFragment"
         android:name="com.androplus.pwdmgr.fragment.expense.InsightsFragment"
         android:label="Insights"

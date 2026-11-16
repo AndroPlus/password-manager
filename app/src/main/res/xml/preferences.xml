@@ -29,6 +29,13 @@
             android:summary="When you pay a new shop or person, a notification asks its category once"
             android:title="Ask category for new payees" />
 
+        <EditTextPreference
+            android:defaultValue="200"
+            android:dependency="ask_category_for_new_payees"
+            android:dialogMessage="Smaller payments to new payees wait in the Home banner instead of notifying you."
+            android:key="prompt_min_amount"
+            android:title="Notify only for payments of at least (₹)" />
+
         <Preference
             android:key="payee_sort"
             android:summary="Give each shop / person you paid a category, biggest spend first"

@@ -180,6 +180,29 @@ class RealmService private constructor() {
         }
     }
 
+    /**
+     * Gives default categories still wearing an old colour the new palette, and
+     * updates the colour stored on their transactions. Returns categories changed.
+     */
+    suspend fun refreshDefaultCategoryColors(): Int = try {
+        realm.write {
+            var changed = 0
+            for (c in query<ExpenseCategory>().find()) {
+                val newColor = com.androplus.pwdmgr.utils.CategoryPalette.upgrade(c.name, c.color) ?: continue
+                c.color = newColor
+                val id = c._id.toHexString()
+                for (t in query<ExpenseTransaction>("categoryId == $0 OR categoryName == $1", id, c.name).find()) {
+                    t.categoryColor = newColor
+                }
+                changed++
+            }
+            changed
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        0
+    }
+
     fun getAllCategories(): List<ExpenseCategory> {
         return realm.query<ExpenseCategory>().find().toList()
     }
@@ -202,21 +225,21 @@ class RealmService private constructor() {
         val existing = getAllCategories().mapTo(HashSet()) { it.name.lowercase() } +
             removedByUser.map { it.lowercase() }.filter { it != "other" }
         val defaults = listOf(
-            Triple("Food & Dining", "food", "#FF6B6B"),
-            Triple("Groceries", "groceries", "#8BC34A"),
-            Triple("Transportation", "transport", "#4ECDC4"),
-            Triple("Bills & Utilities", "bills", "#FF9800"),
-            Triple("Entertainment", "entertainment", "#95E1D3"),
-            Triple("Housing", "housing", "#F38181"),
-            Triple("Healthcare", "healthcare", "#AA96DA"),
-            Triple("Education", "education", "#3F51B5"),
-            Triple("Shopping", "shopping", "#FCBAD3"),
-            Triple("Insurance & Savings", "savings", "#009688"),
-            Triple("Cash", "cash", "#795548"),
-            Triple("Income", "income", "#4CAF50"),
-            Triple("Transfers", "transfers", "#9E9E9E"),
-            Triple("Card Bill", "card", "#607D8B"),
-            Triple("Other", "other", "#BDBDBD"),
+            Triple("Food & Dining", "food", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Food & Dining"] ?: "#737373"),
+            Triple("Groceries", "groceries", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Groceries"] ?: "#737373"),
+            Triple("Transportation", "transport", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Transportation"] ?: "#737373"),
+            Triple("Bills & Utilities", "bills", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Bills & Utilities"] ?: "#737373"),
+            Triple("Entertainment", "entertainment", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Entertainment"] ?: "#737373"),
+            Triple("Housing", "housing", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Housing"] ?: "#737373"),
+            Triple("Healthcare", "healthcare", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Healthcare"] ?: "#737373"),
+            Triple("Education", "education", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Education"] ?: "#737373"),
+            Triple("Shopping", "shopping", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Shopping"] ?: "#737373"),
+            Triple("Insurance & Savings", "savings", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Insurance & Savings"] ?: "#737373"),
+            Triple("Cash", "cash", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Cash"] ?: "#737373"),
+            Triple("Income", "income", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Income"] ?: "#737373"),
+            Triple("Transfers", "transfers", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Transfers"] ?: "#737373"),
+            Triple("Card Bill", "card", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Card Bill"] ?: "#737373"),
+            Triple("Other", "other", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Other"] ?: "#737373"),
         )
         var added = 0
         for ((name, icon, color) in defaults) {

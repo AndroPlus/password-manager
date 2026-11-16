@@ -53,6 +53,7 @@ class ApplicationManager : Application() {
                 com.androplus.pwdmgr.services.RemovedCategories.get(this@ApplicationManager))
             // One time after an update that improves the rules: fix entries saved
             // earlier (e.g. everything unrecognised filed under Shopping).
+            RealmService.getInstance().refreshDefaultCategoryColors()
             val prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)
             if (prefs.getInt(RULES_VERSION_KEY, 0) < RULES_VERSION) {
                 com.androplus.pwdmgr.services.AutoTransactionRecorder.reclassifyAll()

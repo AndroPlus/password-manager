@@ -39,6 +39,8 @@ object CategoryPrompt {
 
     fun ask(context: Context, expense: ExpenseTransaction, payee: String, choices: List<String>) {
         if (!isEnabled(context)) return
+        // Small payments don't interrupt: they wait in the Home banner instead.
+        if (expense.amount < AppPrefs.promptMinAmount(context)) return
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
             != PackageManager.PERMISSION_GRANTED

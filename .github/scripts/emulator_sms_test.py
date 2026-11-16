@@ -99,7 +99,8 @@ def main():
     # Some versions open on a PIN screen, others straight on the module menu.
     end = time.time() + 40
     while time.time() < end:
-        if find("expenseTrackerTile") is not None or find("homeSpentText") is not None:
+        if find("expenseTrackerTile") is not None or find("homeSpentText") is not None \
+                or find("onbPrimary") is not None:
             break
         if find("firstPinView") is not None:
             tap(find("firstPinView"))
@@ -107,6 +108,19 @@ def main():
             tap(wait_for("confirmPin"))
             adb("shell", "input", "text", PIN)
         time.sleep(1)
+    # First run: the 3-step setup (SMS access is already granted by install -g).
+    if find("onbPrimary") is not None:
+        shot("0-setup-step1")
+        tap(find("onbPrimary"))                     # "Continue": SMS already allowed
+        time.sleep(1)
+        tap(wait_for("onbSkip"))                    # skip importing old SMS (inbox is empty)
+        time.sleep(1)
+        tap(wait_for("onbBudget"))
+        adb("shell", "input", "text", "40000")
+        adb("shell", "input", "keyevent", "111")    # hide keyboard
+        time.sleep(1)
+        shot("0-setup-step3-budget")
+        tap(wait_for("onbPrimary"))
     # The app opens straight on the Expense Tracker home; older builds show a menu first.
     if find("homeSpentText") is None:
         tap(wait_for("expenseTrackerTile"))
@@ -142,6 +156,10 @@ def main():
     print("home spent:", spent, "income:", income)
     check(spent.replace("\u00a0", "") == "₹2,079", f"home shows spending 150 + 1,899 + 30 (got {spent!r})")
     check("85,000" in income, f"home shows income (got {income!r})")
+    budget = (find("homeBudgetText").get("text") or "") if find("homeBudgetText") is not None else ""
+    daily = (find("homeDailyText").get("text") or "") if find("homeDailyText") is not None else ""
+    print("budget:", budget, "| daily:", daily)
+    check("40,000" in budget and "a day left" in daily, f"budget from setup drives the per-day figure ({budget!r}, {daily!r})")
     check(find("homePayeeBanner") is not None, "home asks to categorise new payees")
 
     # Spending tab: category cards.
@@ -167,17 +185,19 @@ def main():
 
     # Learning: move AMAZON to Cash once; the next AMAZON SMS must follow.
     tap(wait_for(text="AMAZON"))
-    tap(wait_for("categorySpinner"))
-    tap(wait_for(text="Cash"))   # visible without scrolling the dropdown
+    wait_for("categoryChips")
     time.sleep(1)
-    save = find("saveButton")
-    for _ in range(4):
-        if save is not None:
+    shot("3b-edit-screen")
+    cash = find(text="Cash")
+    for _ in range(4):                          # category chips may be below the fold
+        if cash is not None:
             break
-        adb("shell", "input", "swipe", "160", "500", "160", "150", "300")
+        adb("shell", "input", "swipe", "160", "450", "160", "200", "300")
         time.sleep(1)
-        save = find("saveButton")
-    tap(save if save is not None else wait_for("saveButton"))
+        cash = find(text="Cash")
+    tap(cash if cash is not None else wait_for(text="Cash"))
+    time.sleep(1)
+    tap(wait_for("saveButton"))
     wait_for("expenseRecyclerView")
     time.sleep(2)
     adb("logcat", "-c")
