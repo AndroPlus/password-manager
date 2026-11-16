@@ -237,12 +237,10 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:drawablePadding="4dp"
+                        android:maxLines="1"
                         android:text="Not counted"
                         android:textColor="@color/ink_muted"
-                        android:textSize="12sp"
-                        app:drawableEndCompat="@drawable/ic_info"
-                        app:drawableTint="@color/ink_muted" />
+                        android:textSize="12sp" />
 
                     <TextView
                         android:id="@+id/homeNotCountedText"

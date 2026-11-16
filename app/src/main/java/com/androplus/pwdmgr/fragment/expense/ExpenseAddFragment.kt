@@ -129,7 +129,9 @@ class ExpenseAddFragment : Fragment() {
             editingExpense?.let { expense ->
                 originalShortDescription = expense.shortDescription
                 originalCategoryName = expense.categoryName
-                binding.amountEditText.setText(expense.amount.toString())
+                // 1899.0 → "1899", 249.5 → "249.5"
+                binding.amountEditText.setText(
+                    if (expense.amount % 1.0 == 0.0) expense.amount.toLong().toString() else expense.amount.toString())
                 binding.descriptionEditText.setText(expense.description)
                 sourceTag = DuplicateDetector.sourceOf(expense.shortDescription)
                 binding.shortDescriptionEditText.setText(
