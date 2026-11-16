@@ -198,6 +198,9 @@ class ExpenseAddFragment : Fragment() {
         if (payee.isBlank()) return
         val appContext = requireContext().applicationContext
         val name = ExpenseGrouping.displayTitle(payee, categoryName)
+        // Answered here instead of on the "new payee" notification.
+        androidx.core.app.NotificationManagerCompat.from(appContext)
+            .cancel(com.androplus.pwdmgr.services.CategoryPrompt.notificationId(payee))
         AutoTransactionRecorder.init(appContext)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val moved = AutoTransactionRecorder.learn(payee, isExpense, categoryName)

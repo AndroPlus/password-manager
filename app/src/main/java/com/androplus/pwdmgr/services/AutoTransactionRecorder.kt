@@ -3,6 +3,8 @@ package com.androplus.pwdmgr.services
 import android.content.Context
 import android.util.Log
 import com.androplus.pwdmgr.utils.CategoryMemory
+import com.androplus.pwdmgr.utils.ExpenseGrouping
+import com.androplus.pwdmgr.utils.PayeeSorting
 import com.androplus.pwdmgr.model.ExpenseTransaction
 import com.androplus.pwdmgr.utils.AutoReclassifier
 import com.androplus.pwdmgr.utils.AutoTxn
@@ -30,14 +32,18 @@ object AutoTransactionRecorder {
 
     /** Categories the user picked for a payee; used before the built-in rules. */
     @Volatile private var memory: CategoryMemory? = null
+    @Volatile private var appContext: Context? = null
 
     fun init(context: Context) {
+        appContext = context.applicationContext
         if (memory == null) {
             memory = CategoryMemory(File(context.applicationContext.filesDir, "learned_categories.json"))
         }
     }
 
     fun learnedCount(): Int = memory?.size() ?: 0
+
+    fun isLearned(key: String): Boolean = memory?.hasKey(key) ?: false
 
     fun forgetLearned() {
         memory?.clear()
@@ -89,17 +95,35 @@ object AutoTransactionRecorder {
         memory?.categoryFor(merchant, isExpense)?.takeIf { it in names }
             ?: TransactionCategorizer.categorizeOrOther(merchant, rawText, isExpense, names)
 
-    /** [at] is when the payment happened; past SMS imports pass the SMS's own time. */
+    /**
+     * [at] is when the payment happened; past SMS imports pass the SMS's own time.
+     * [ask]: for a payee seen for the first time, show a notification asking for
+     * its category (off for bulk imports of old SMS).
+     */
     fun record(
         parsed: ParsedTransaction,
         source: String,
         rawText: String,
         at: Long = System.currentTimeMillis(),
+        ask: Boolean = true,
     ): Job = scope.launch {
-        mutex.withLock { save(parsed, source, rawText, at) }
+        val saved = mutex.withLock { save(parsed, source, rawText, at) } ?: return@launch
+        val ctx = appContext ?: return@launch
+        val key = CategoryMemory.key(parsed.merchant, true)
+        if (ask && parsed.isExpense && key != null && !isLearned(key) &&
+            saved.categoryName !in ExpenseGrouping.NOT_COUNTED
+        ) {
+            val realmService = RealmService.getInstance()
+            val names = realmService.getAllCategories().map { it.name }
+            val past = realmService.getAllExpenses().filter { it.type == "EXPENSE" }.map { it.categoryName }
+            runCatching {
+                CategoryPrompt.ask(ctx, saved, parsed.merchant, PayeeSorting.quickChoices(saved.categoryName, past, names))
+            }.onFailure { Log.w(TAG, "Could not show category prompt", it) }
+        }
     }
 
-    private suspend fun save(parsed: ParsedTransaction, source: String, rawText: String, now: Long) {
+    /** Returns the saved entry, or null when it was a duplicate or not saved. */
+    private suspend fun save(parsed: ParsedTransaction, source: String, rawText: String, now: Long): ExpenseTransaction? {
         val realmService = RealmService.getInstance()
 
         val recent = realmService
@@ -111,7 +135,7 @@ object AutoTransactionRecorder {
         val candidate = AutoTxn(parsed.amount, parsed.isExpense, now, source, rawText)
         if (DuplicateDetector.isDuplicate(candidate, recent)) {
             Log.d(TAG, "Skipped duplicate $source transaction")
-            return
+            return null
         }
 
         val categories = realmService.getAllCategories()
@@ -132,6 +156,7 @@ object AutoTransactionRecorder {
         }
         val saved = realmService.createExpense(expense)
         Log.d(TAG, "Saved $source transaction: $saved")
+        return if (saved) expense else null
     }
 
     /**

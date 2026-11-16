@@ -23,6 +23,17 @@
             android:summary="Payment-app notifications this app has received, and how each was read"
             android:title="Recent payment notifications" />
 
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="ask_category_for_new_payees"
+            android:summary="When you pay a new shop or person, a notification asks its category once"
+            android:title="Ask category for new payees" />
+
+        <Preference
+            android:key="payee_sort"
+            android:summary="Give each shop / person you paid a category, biggest spend first"
+            android:title="Sort your payees" />
+
         <Preference
             android:key="learned_categories"
             android:title="Learned categories" />

@@ -207,6 +207,30 @@
                 android:text="Pick dates" />
         </com.google.android.material.chip.ChipGroup>
 
+        <!-- "N payees to sort" banner -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/payeeBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="4dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:visibility="gone"
+            app:cardBackgroundColor="#FFF8E1"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp">
+
+            <TextView
+                android:id="@+id/payeeBannerText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="12dp"
+                android:textColor="#5D4037"
+                android:textSize="14sp" />
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Expense List -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/expenseRecyclerView"

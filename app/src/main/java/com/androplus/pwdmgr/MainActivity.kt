@@ -57,6 +57,31 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
                 }
             }
         }
+
+        if (savedInstanceState == null) openExpenseFrom(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        openExpenseFrom(intent)
+    }
+
+    /** From the "new payee" notification: open that transaction to pick its category. */
+    private fun openExpenseFrom(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT, false) == true) {
+            intent.removeExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT)
+            binding.root.post {
+                findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.PayeeSortFragment)
+            }
+            return
+        }
+        val id = intent?.getStringExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_EDIT_EXPENSE_ID) ?: return
+        intent.removeExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_EDIT_EXPENSE_ID)
+        // After the start screen has opened the Expense Tracker, so Back returns there.
+        binding.root.post {
+            findNavController(R.id.nav_host_fragment_content_main)
+                .navigate(R.id.ExpenseAddFragment, Bundle().apply { putString("expense_id", id) })
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {

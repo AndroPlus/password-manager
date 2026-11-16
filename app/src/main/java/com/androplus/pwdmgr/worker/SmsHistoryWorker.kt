@@ -38,7 +38,7 @@ class SmsHistoryWorker(appContext: Context, params: WorkerParameters) :
 
         val jobs = bankSms.mapNotNull { sms ->
             TransactionParser.parseSms(sms.body)?.let { parsed ->
-                AutoTransactionRecorder.record(parsed, "SMS", sms.body, at = sms.sentAt)
+                AutoTransactionRecorder.record(parsed, "SMS", sms.body, at = sms.sentAt, ask = false)
             }
         }
         jobs.joinAll()

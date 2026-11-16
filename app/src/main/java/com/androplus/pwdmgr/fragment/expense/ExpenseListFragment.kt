@@ -58,6 +58,7 @@ class ExpenseListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         setupRecyclerView()
         setupListeners()
+        askNotificationPermission()
 
         // Reload whenever an expense is saved, including ones captured from SMS or
         // GPay/PhonePe while this screen is open. Also covers returning to it.
@@ -66,6 +67,30 @@ class ExpenseListFragment : Fragment() {
                 RealmService.getInstance().expenseChanges().collect { loadExpenses() }
             }
         }
+    }
+
+    // The "which category is this new shop?" prompt is a notification (Android 13+ asks).
+    private val notificationPermission =
+        registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+
+    private fun askNotificationPermission() {
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
+        val permission = android.Manifest.permission.POST_NOTIFICATIONS
+        if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), permission)
+            != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) notificationPermission.launch(permission)
+    }
+
+    private fun updatePayeeBanner() {
+        val todo = PayeeSortFragment.unsorted()
+        if (todo.isEmpty()) {
+            binding.payeeBanner.visibility = View.GONE
+            return
+        }
+        val total = todo.sumOf { it.total }
+        binding.payeeBannerText.text = "${todo.size} shop(s)/people without a category " +
+            "(${summaryFormat.format(total)}). Tap to sort them once →"
+        binding.payeeBanner.visibility = View.VISIBLE
     }
 
     private fun setupRecyclerView() {
@@ -107,6 +132,10 @@ class ExpenseListFragment : Fragment() {
 
         binding.btnAnalytics.setOnClickListener {
             findNavController().navigate(R.id.action_expense_list_to_analytics)
+        }
+
+        binding.payeeBanner.setOnClickListener {
+            findNavController().navigate(R.id.PayeeSortFragment)
         }
 
         binding.btnCategories.setOnClickListener {
@@ -198,6 +227,8 @@ class ExpenseListFragment : Fragment() {
         val rows = loaded.map { it.toRow() }
         groupAdapter.submit(ExpenseGrouping.group(rows))
         updateSummary(rows)
+        com.androplus.pwdmgr.services.AutoTransactionRecorder.init(requireContext())
+        updatePayeeBanner()
         binding.chipPickDates.text = if (currentFilter == "CUSTOM") customLabel() else "Pick dates"
         syncChips()
         binding.emptyStateText.visibility = if (loaded.isEmpty()) View.VISIBLE else View.GONE

@@ -29,6 +29,10 @@ class CategoryMemory(private val file: File) {
     fun categoryFor(payee: String, isExpense: Boolean): String? =
         key(payee, isExpense)?.let { load()[it] }
 
+    /** True if a payee key (from [key]) already has a category. */
+    @Synchronized
+    fun hasKey(key: String): Boolean = load().containsKey(key)
+
     @Synchronized
     fun size(): Int = load().size
 

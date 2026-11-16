@@ -246,6 +246,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 }
                 return true
             }
+            "payee_sort" -> {
+                startActivity(
+                    Intent(requireContext(), com.androplus.pwdmgr.MainActivity::class.java)
+                        .putExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+                return true
+            }
             "recheck_categories" -> {
                 recheckCategories()
                 return true

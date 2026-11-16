@@ -49,6 +49,10 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".services.CategoryActionReceiver"
+            android:exported="false" />
+
         <activity android:name=".SettingsActivity"/>
     </application>
 

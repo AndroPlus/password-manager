@@ -111,6 +111,12 @@
         android:label="Analytics"
         tools:layout="@layout/fragment_expense_analytics" />
 
+    <fragment
+        android:id="@+id/PayeeSortFragment"
+        android:name="com.androplus.pwdmgr.fragment.expense.PayeeSortFragment"
+        android:label="Sort your payees"
+        tools:layout="@layout/fragment_payee_sort" />
+
     <!-- Todo Module -->
     <fragment
         android:id="@+id/TodoListFragment"
