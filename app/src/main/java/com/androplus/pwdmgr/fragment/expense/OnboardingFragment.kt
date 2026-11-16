@@ -49,8 +49,10 @@ class OnboardingFragment : Fragment() {
         binding.onbPrimary.setOnClickListener { primary() }
         binding.onbSkip.setOnClickListener { next() }
         // The keyboard's ✓ saves the budget, so nobody has to dismiss it to reach the button.
-        binding.onbBudget.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE && step == 2) { primary(); true } else false
+        binding.onbBudget.setOnEditorActionListener { _, actionId, event ->
+            val done = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                (event?.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_UP)
+            if (done && step == 2) { primary(); true } else false
         }
         show()
     }
@@ -136,7 +138,11 @@ class OnboardingFragment : Fragment() {
         show()
     }
 
+    private var finished = false
+
     private fun finish() {
+        if (finished || !isAdded) return
+        finished = true
         AppPrefs.setOnboardingDone(requireContext())
         findNavController().navigate(
             R.id.ExpenseHomeFragment, null,
