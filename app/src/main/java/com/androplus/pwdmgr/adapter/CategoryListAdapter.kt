@@ -40,8 +40,8 @@ class CategoryListAdapter(
             bgDrawable.setColor(Color.LTGRAY)
         }
 
-        // Show delete only for non-default categories
-        if (!category.isDefault) {
+        // Every category can be removed except "Other", where removed ones' transactions go.
+        if (!category.name.equals("Other", ignoreCase = true)) {
             holder.deleteIcon.visibility = View.VISIBLE
             holder.deleteIcon.setOnClickListener {
                 onDeleteClick(category)

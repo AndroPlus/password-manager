@@ -1,197 +1,239 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:fillViewport="true">
+    android:background="@color/surface"
+    android:orientation="vertical">
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Spent / received -->
+            <RadioGroup
+                android:id="@+id/typeRadioGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_tile"
+                android:orientation="horizontal"
+                android:padding="4dp">
+
+                <RadioButton
+                    android:id="@+id/radioExpense"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:buttonTint="@color/accent"
+                    android:checked="true"
+                    android:text="Money out"
+                    android:textColor="@color/ink" />
+
+                <RadioButton
+                    android:id="@+id/radioIncome"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:buttonTint="@color/accent"
+                    android:text="Money in"
+                    android:textColor="@color/ink" />
+            </RadioGroup>
+
+            <!-- Amount + name -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="@string/amount"
+                    app:boxStrokeColor="@color/accent"
+                    app:hintTextColor="@color/accent"
+                    app:prefixText="₹ ">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/amountEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:inputType="numberDecimal"
+                        android:textSize="24sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="Paid to / name"
+                    app:boxStrokeColor="@color/accent"
+                    app:hintTextColor="@color/accent">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/shortDescriptionEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textCapWords" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/dateButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:gravity="start|center_vertical"
+                    android:text="@string/select_date"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ink"
+                    app:icon="@drawable/ic_calendar"
+                    app:iconTint="@color/ink_soft"
+                    app:strokeColor="@color/outline" />
+            </LinearLayout>
+
+            <!-- Category -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="12dp"
+                android:paddingBottom="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/category"
+                        android:textColor="@color/ink"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:id="@+id/manageCategoriesButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="44dp"
+                        android:background="?attr/selectableItemBackground"
+                        android:fontFamily="sans-serif-medium"
+                        android:gravity="center"
+                        android:paddingHorizontal="4dp"
+                        android:text="Edit list"
+                        android:textColor="@color/accent"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/categoryChips"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    app:selectionRequired="true"
+                    app:singleSelection="true" />
+            </LinearLayout>
+
+            <!-- Note and receipt -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/descriptionLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Note"
+                    app:boxStrokeColor="@color/accent"
+                    app:hintTextColor="@color/accent">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/descriptionEditText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:inputType="textMultiLine"
+                        android:maxLines="5"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/attachReceiptButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="4dp"
+                    android:text="Attach receipt photo"
+                    android:textAllCaps="false"
+                    android:textColor="@color/accent" />
+
+                <ImageView
+                    android:id="@+id/receiptImageView"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:layout_marginTop="8dp"
+                    android:contentDescription="Receipt"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:background="@color/white"
+        android:orientation="horizontal"
+        android:padding="12dp">
 
-        <!-- Type Selection -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/type"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <RadioGroup
-            android:id="@+id/typeRadioGroup"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
-            <RadioButton
-                android:id="@+id/radioExpense"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:checked="true"
-                android:text="@string/expense" />
-
-            <RadioButton
-                android:id="@+id/radioIncome"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/income" />
-        </RadioGroup>
-
-        <!-- Amount -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="@string/amount"
-            app:startIconDrawable="@android:drawable/ic_menu_sort_by_size">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/amountEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="numberDecimal" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Category -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/category"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Spinner
-            android:id="@+id/categorySpinner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:minHeight="48dp"
-            android:padding="12dp" />
-
-        <Button
-            android:id="@+id/manageCategoriesButton"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:layout_gravity="end"
-            android:text="@string/manage_categories"
-            android:textSize="14sp"/>
-
-        <!-- Short Description -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="Short Description">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/shortDescriptionEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textCapWords" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Description -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:hint="@string/description">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/descriptionEditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:inputType="textMultiLine"
-                android:lines="3"
-                android:maxLines="5" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <!-- Date -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/date"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/dateButton"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/cancelButton"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="8dp"
-            android:text="@string/select_date"
-            android:textAlignment="center"
-            android:gravity="center"
-            android:textSize="16sp" />
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_marginEnd="10dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/cancel"
+            android:textAllCaps="false"
+            android:textColor="@color/ink_soft"
+            app:cornerRadius="14dp"
+            app:strokeColor="@color/outline" />
 
-        <!-- Receipt Attachment -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Receipt"
-            android:textColor="?android:attr/textColorPrimary"
-            android:textSize="14sp"
-            android:textStyle="bold" />
-
-        <Button
-            android:id="@+id/attachReceiptButton"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:layout_marginTop="8dp"
-            android:text="Attach Receipt"
-            android:textAlignment="center"
-            android:gravity="center"
-            android:textSize="16sp" />
-
-        <ImageView
-            android:id="@+id/receiptImageView"
-            android:layout_width="match_parent"
-            android:layout_height="200dp"
-            android:layout_marginTop="8dp"
-            android:scaleType="centerCrop"
-            android:visibility="gone"
-            android:contentDescription="Attached receipt" />
-
-        <!-- Buttons -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="24dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/cancelButton"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_marginEnd="8dp"
-                android:layout_weight="1"
-                android:textSize="16sp"
-                android:text="@string/cancel" />
-
-            <Button
-                android:id="@+id/saveButton"
-                style="@style/Widget.MaterialComponents.Button"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:textSize="16sp"
-                android:text="@string/save" />
-        </LinearLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/saveButton"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="2"
+            android:backgroundTint="@color/accent"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/save"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            app:cornerRadius="14dp" />
     </LinearLayout>
-</ScrollView>
+</LinearLayout>

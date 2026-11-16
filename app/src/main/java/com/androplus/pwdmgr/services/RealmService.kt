@@ -11,6 +11,8 @@ import io.realm.kotlin.Realm
 import io.realm.kotlin.RealmConfiguration
 import io.realm.kotlin.ext.query
 import io.realm.kotlin.query.RealmResults
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import org.mongodb.kbson.ObjectId
 
 class RealmService private constructor() {
@@ -145,6 +147,62 @@ class RealmService private constructor() {
         }
     }
 
+    /**
+     * Removes [category] after moving its transactions to [targetName] ("Other"),
+     * creating that category if needed. Budgets for the removed category go too.
+     * Returns how many transactions were moved, or null on failure.
+     */
+    suspend fun deleteCategoryMovingTransactions(category: ExpenseCategory, targetName: String = "Other"): Int? {
+        if (category.name.equals(targetName, ignoreCase = true)) return null
+        if (getAllCategories().none { it.name.equals(targetName, ignoreCase = true) }) {
+            createCategory(ExpenseCategory().apply {
+                name = targetName; icon = "other"; color = "#BDBDBD"; isDefault = true
+            })
+        }
+        return try {
+            realm.write {
+                val target = query<ExpenseCategory>("name ==[c] $0", targetName).first().find()
+                    ?: return@write null
+                val id = category._id.toHexString()
+                val moving = query<ExpenseTransaction>("categoryId == $0 OR categoryName == $1", id, category.name).find()
+                for (t in moving) {
+                    t.categoryId = target._id.toHexString()
+                    t.categoryName = target.name
+                    t.categoryColor = target.color
+                }
+                delete(query<ExpenseBudget>("categoryId == $0", id).find())
+                query<ExpenseCategory>("_id == $0", category._id).first().find()?.let { delete(it) }
+                moving.size
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    /**
+     * Gives default categories still wearing an old colour the new palette, and
+     * updates the colour stored on their transactions. Returns categories changed.
+     */
+    suspend fun refreshDefaultCategoryColors(): Int = try {
+        realm.write {
+            var changed = 0
+            for (c in query<ExpenseCategory>().find()) {
+                val newColor = com.androplus.pwdmgr.utils.CategoryPalette.upgrade(c.name, c.color) ?: continue
+                c.color = newColor
+                val id = c._id.toHexString()
+                for (t in query<ExpenseTransaction>("categoryId == $0 OR categoryName == $1", id, c.name).find()) {
+                    t.categoryColor = newColor
+                }
+                changed++
+            }
+            changed
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        0
+    }
+
     fun getAllCategories(): List<ExpenseCategory> {
         return realm.query<ExpenseCategory>().find().toList()
     }
@@ -157,62 +215,44 @@ class RealmService private constructor() {
         }
     }
 
-    suspend fun initializeDefaultCategories() {
-        val existingCategories = getAllCategories()
-        if (existingCategories.isNotEmpty()) {
-            Log.d("RealmService", "Categories already initialized")
-            return
-        }
-
-        val defaultCategories = listOf(
-            ExpenseCategory().apply {
-                name = "Food & Dining"
-                icon = "food"
-                color = "#FF6B6B"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Transportation"
-                icon = "transport"
-                color = "#4ECDC4"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Entertainment"
-                icon = "entertainment"
-                color = "#95E1D3"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Housing"
-                icon = "housing"
-                color = "#F38181"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Healthcare"
-                icon = "healthcare"
-                color = "#AA96DA"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Shopping"
-                icon = "shopping"
-                color = "#FCBAD3"
-                isDefault = true
-            },
-            ExpenseCategory().apply {
-                name = "Income"
-                icon = "income"
-                color = "#4CAF50"
-                isDefault = true
-            }
+    /**
+     * Adds any default category the user doesn't have yet, matched by name, so
+     * categories introduced in later versions reach existing installs too. Never
+     * renames or removes the user's own categories.
+     */
+    suspend fun initializeDefaultCategories(removedByUser: Set<String> = emptySet()) {
+        // Defaults the user removed stay removed ("Other" is always kept).
+        val existing = getAllCategories().mapTo(HashSet()) { it.name.lowercase() } +
+            removedByUser.map { it.lowercase() }.filter { it != "other" }
+        val defaults = listOf(
+            Triple("Food & Dining", "food", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Food & Dining"] ?: "#737373"),
+            Triple("Groceries", "groceries", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Groceries"] ?: "#737373"),
+            Triple("Transportation", "transport", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Transportation"] ?: "#737373"),
+            Triple("Bills & Utilities", "bills", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Bills & Utilities"] ?: "#737373"),
+            Triple("Entertainment", "entertainment", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Entertainment"] ?: "#737373"),
+            Triple("Housing", "housing", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Housing"] ?: "#737373"),
+            Triple("Healthcare", "healthcare", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Healthcare"] ?: "#737373"),
+            Triple("Education", "education", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Education"] ?: "#737373"),
+            Triple("Shopping", "shopping", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Shopping"] ?: "#737373"),
+            Triple("Insurance & Savings", "savings", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Insurance & Savings"] ?: "#737373"),
+            Triple("Cash", "cash", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Cash"] ?: "#737373"),
+            Triple("Income", "income", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Income"] ?: "#737373"),
+            Triple("Transfers", "transfers", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Transfers"] ?: "#737373"),
+            Triple("Card Bill", "card", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Card Bill"] ?: "#737373"),
+            Triple("Other", "other", com.androplus.pwdmgr.utils.CategoryPalette.COLORS["Other"] ?: "#737373"),
         )
-
-        defaultCategories.forEach { category ->
-            createCategory(category)
+        var added = 0
+        for ((name, icon, color) in defaults) {
+            if (name.lowercase() in existing) continue
+            createCategory(ExpenseCategory().apply {
+                this.name = name
+                this.icon = icon
+                this.color = color
+                isDefault = true
+            })
+            added++
         }
-        Log.d("RealmService", "Default categories initialized")
+        Log.d("RealmService", "Default categories: added $added")
     }
 
     // ==================== EXPENSE TRANSACTION METHODS ====================
@@ -267,6 +307,10 @@ class RealmService private constructor() {
             .find()
             .sortedByDescending { it.date }
     }
+
+    /** Emits once now, then whenever any expense is added, changed or deleted. */
+    fun expenseChanges(): Flow<Unit> =
+        realm.query<ExpenseTransaction>().asFlow().map { }
 
     fun getExpensesByDateRange(startDate: Long, endDate: Long): List<ExpenseTransaction> {
         return realm.query<ExpenseTransaction>("date >= $0 AND date <= $1", startDate, endDate)

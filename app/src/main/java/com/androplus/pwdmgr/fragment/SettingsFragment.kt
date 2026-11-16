@@ -13,6 +13,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.core.content.ContextCompat
+import androidx.preference.EditTextPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
@@ -20,6 +21,23 @@ import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.model.AppField
 import com.androplus.pwdmgr.services.EncryptDecrypt
 import com.androplus.pwdmgr.services.RealmService
+import com.androplus.pwdmgr.services.ServerSync
+import com.androplus.pwdmgr.services.AutoTransactionRecorder
+import com.androplus.pwdmgr.services.TransactionNotificationListener
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import com.androplus.pwdmgr.worker.SmsHistoryWorker
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.androplus.pwdmgr.utils.UploadClient
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
@@ -30,8 +48,170 @@ import java.io.FileWriter
 
 class SettingsFragment : PreferenceFragmentCompat() {
 
+    companion object {
+        private const val REQUEST_READ_SMS = 102
+    }
+
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
+        setupServerSyncPreferences()
+        findPreference<EditTextPreference>("prompt_min_amount")?.apply {
+            setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER }
+            summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
+                "₹" + (p.text?.takeIf { it.isNotBlank() } ?: "200")
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateSyncSummary()
+        updateNotificationStatus()
+    }
+
+    private fun updateNotificationStatus() {
+        val ctx = requireContext()
+        val granted = TransactionNotificationListener.hasAccess(ctx)
+        if (granted) TransactionNotificationListener.rebind(ctx)
+        findPreference<Preference>("notification_access_status")?.summary =
+            if (granted) "Granted. GPay / PhonePe / Paytm notifications can be read."
+            else "NOT granted — tap to open settings. Payment-app tracking cannot work without it."
+        AutoTransactionRecorder.init(ctx)
+        val learned = AutoTransactionRecorder.learnedCount()
+        findPreference<Preference>("learned_categories")?.summary =
+            if (learned == 0) "Change a transaction's category once and later ones from the same payee follow it"
+            else "$learned payee(s) remembered. Tap to forget them all."
+        val seen = TransactionNotificationListener.log(ctx).recent()
+        findPreference<Preference>("seen_notifications")?.summary =
+            if (seen.isEmpty()) "None received yet"
+            else "${seen.size} received; last at " + timeFormat.format(Date(seen.first().timeMillis))
+    }
+
+    private val timeFormat = SimpleDateFormat("dd MMM, HH:mm", Locale("en", "IN"))
+
+    private fun showNotificationAccessHelp() {
+        AlertDialog.Builder(context)
+            .setTitle("Allow notification access")
+            .setMessage(
+                "1. Tap Open settings and switch on \"PwdMgr New\".\n\n" +
+                "If Android says it is a restricted setting (Android 13+, apps installed from an APK):\n" +
+                "2. Open App info for PwdMgr New → ⋮ menu (top right) → Allow restricted settings.\n" +
+                "3. Come back and switch it on.\n\n" +
+                "Note: GPay and PhonePe often show no notification for money you send. " +
+                "Bank and credit-card SMS remain the most reliable source; keep SMS Tracking on."
+            )
+            .setPositiveButton("Open settings") { _, _ ->
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            }
+            .setNeutralButton("App info") { _, _ ->
+                startActivity(
+                    Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                        .setData(android.net.Uri.parse("package:" + requireContext().packageName))
+                )
+            }
+            .setNegativeButton("Close", null)
+            .show()
+    }
+
+    private fun showSeenNotifications() {
+        val log = TransactionNotificationListener.log(requireContext())
+        val seen = log.recent()
+        val body = if (seen.isEmpty()) {
+            "No GPay / PhonePe / Paytm notification has reached this app yet.\n\n" +
+                "If you have made payments since enabling access, notification access is probably " +
+                "blocked or the payment app does not notify for outgoing payments."
+        } else {
+            seen.joinToString("\n\n") {
+                "${timeFormat.format(Date(it.timeMillis))} · ${it.source} · ${it.outcome}\n${it.title}\n${it.text}"
+            }
+        }
+        AlertDialog.Builder(context)
+            .setTitle("Recent payment notifications")
+            .setMessage(body)
+            .setPositiveButton("OK", null)
+            .setNegativeButton("Clear") { _, _ -> log.clear(); updateNotificationStatus() }
+            .show()
+    }
+
+    private fun recheckCategories() {
+        Toast.makeText(context, "Re-checking categories…", Toast.LENGTH_SHORT).show()
+        val appContext = requireContext().applicationContext
+        lifecycleScope.launch {
+            val changed = withContext(Dispatchers.IO) { AutoTransactionRecorder.reclassifyAll() }
+            Toast.makeText(appContext, "Updated $changed transaction(s)", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun setupServerSyncPreferences() {
+        findPreference<EditTextPreference>(ServerSync.PREF_URL)?.apply {
+            setOnBindEditTextListener {
+                it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
+            }
+            summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
+                p.text?.takeIf { it.isNotBlank() } ?: "e.g. https://finintel-xxxx.onrender.com"
+            }
+            setOnPreferenceChangeListener { _, value ->
+                val ok = UploadClient.isValidServerUrl(value as String)
+                if (!ok) Toast.makeText(context, "Server URL must start with https://", Toast.LENGTH_LONG).show()
+                else ServerSync.schedule(requireContext())
+                ok
+            }
+        }
+        findPreference<EditTextPreference>(ServerSync.PREF_TOKEN)?.apply {
+            setOnBindEditTextListener {
+                it.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            }
+            // Never show the token itself on screen.
+            summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
+                if (p.text.isNullOrBlank()) "Not set" else "Set (hidden)"
+            }
+            setOnPreferenceChangeListener { _, _ ->
+                ServerSync.schedule(requireContext())
+                true
+            }
+        }
+    }
+
+    private fun chooseImportPeriod() {
+        val labels = arrayOf("Last 30 days", "Last 90 days", "Last 180 days")
+        val days = intArrayOf(30, 90, 180)
+        AlertDialog.Builder(context)
+            .setTitle("Import past bank SMS")
+            .setItems(labels) { _, which -> startHistoryImport(days[which]) }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun startHistoryImport(days: Int) {
+        val request = OneTimeWorkRequestBuilder<SmsHistoryWorker>()
+            .setInputData(workDataOf(SmsHistoryWorker.KEY_DAYS to days))
+            .build()
+        val wm = WorkManager.getInstance(requireContext())
+        wm.enqueueUniqueWork(SmsHistoryWorker.WORK_NAME, ExistingWorkPolicy.KEEP, request)
+        Toast.makeText(context, "Importing the last $days days of bank SMS…", Toast.LENGTH_SHORT).show()
+
+        val appContext = requireContext().applicationContext
+        wm.getWorkInfoByIdLiveData(request.id).observe(this) { info ->
+            if (info == null || !info.state.isFinished) return@observe
+            val out = info.outputData
+            val message = if (info.state == WorkInfo.State.SUCCEEDED) {
+                val found = out.getInt(SmsHistoryWorker.KEY_RECORDED, 0)
+                val queued = out.getInt(SmsHistoryWorker.KEY_QUEUED, 0)
+                "Found $found transactions in ${out.getInt(SmsHistoryWorker.KEY_SCANNED, 0)} bank SMS" +
+                    (if (queued > 0) "; $queued queued for the server." else ".") +
+                    " Already-saved ones were skipped."
+            } else {
+                "Import failed: " + (out.getString(SmsHistoryWorker.KEY_ERROR) ?: "unknown error")
+            }
+            Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+            if (isAdded) updateSyncSummary()
+        }
+    }
+
+    private fun updateSyncSummary() {
+        val pending = ServerSync.outbox(requireContext()).size()
+        findPreference<Preference>("server_sync_now")?.summary =
+            if (pending == 0) "Nothing waiting to upload" else "$pending message(s) waiting to upload"
     }
 
     override fun onPreferenceTreeClick(preference: Preference): Boolean {
@@ -50,6 +230,56 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 }
                 return true
             }
+            "notification_access_status" -> {
+                showNotificationAccessHelp()
+                return true
+            }
+            "seen_notifications" -> {
+                showSeenNotifications()
+                return true
+            }
+            "learned_categories" -> {
+                if (AutoTransactionRecorder.learnedCount() > 0) {
+                    AlertDialog.Builder(context)
+                        .setTitle("Forget learned categories?")
+                        .setMessage("New transactions will use the built-in rules again. Saved transactions keep their category.")
+                        .setPositiveButton("Forget") { _, _ ->
+                            AutoTransactionRecorder.forgetLearned()
+                            updateNotificationStatus()
+                        }
+                        .setNegativeButton("Cancel", null)
+                        .show()
+                }
+                return true
+            }
+            "payee_sort" -> {
+                startActivity(
+                    Intent(requireContext(), com.androplus.pwdmgr.MainActivity::class.java)
+                        .putExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                )
+                return true
+            }
+            "recheck_categories" -> {
+                recheckCategories()
+                return true
+            }
+            "import_past_sms" -> {
+                if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_SMS)
+                    == PackageManager.PERMISSION_GRANTED
+                ) {
+                    chooseImportPeriod()
+                } else {
+                    requestPermissions(arrayOf(Manifest.permission.READ_SMS), REQUEST_READ_SMS)
+                }
+                return true
+            }
+            "server_sync_now" -> {
+                ServerSync.schedule(requireContext())
+                Toast.makeText(context, "Uploading in the background", Toast.LENGTH_SHORT).show()
+                updateSyncSummary()
+                return true
+            }
             "download_option" -> {
                 showPasswordDialog()
                 return true
@@ -61,12 +291,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
     }
 
     private fun checkNotificationAccess() {
-        val notificationListenerString = Settings.Secure.getString(requireContext().contentResolver, "enabled_notification_listeners")
-        if (notificationListenerString == null || !notificationListenerString.contains(requireContext().packageName)) {
-            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-            startActivity(intent)
-            Toast.makeText(context, "Please enable Notification Access for Expense Tracker", Toast.LENGTH_LONG).show()
-        }
+        if (!TransactionNotificationListener.hasAccess(requireContext())) showNotificationAccessHelp()
     }
 
     private fun showPasswordDialog() {
@@ -128,6 +353,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        if (requestCode == REQUEST_READ_SMS) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                chooseImportPeriod()
+            } else {
+                Toast.makeText(context, "SMS permission is needed to import past messages.", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
         if (requestCode == 101) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(context, "SMS Permission Granted", Toast.LENGTH_SHORT).show()
