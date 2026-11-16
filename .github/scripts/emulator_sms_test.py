@@ -117,10 +117,9 @@ def main():
         time.sleep(1)
         tap(wait_for("onbBudget"))
         adb("shell", "input", "text", "40000")
-        adb("shell", "input", "keyevent", "111")    # hide keyboard
         time.sleep(1)
         shot("0-setup-step3-budget")
-        tap(wait_for("onbPrimary"))
+        adb("shell", "input", "keyevent", "66")     # keyboard ✓ (Done) saves and starts
     # The app opens straight on the Expense Tracker home; older builds show a menu first.
     if find("homeSpentText") is None:
         tap(wait_for("expenseTrackerTile"))

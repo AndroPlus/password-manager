@@ -48,6 +48,10 @@ class OnboardingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.onbPrimary.setOnClickListener { primary() }
         binding.onbSkip.setOnClickListener { next() }
+        // The keyboard's ✓ saves the budget, so nobody has to dismiss it to reach the button.
+        binding.onbBudget.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE && step == 2) { primary(); true } else false
+        }
         show()
     }
 
