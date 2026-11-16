@@ -35,7 +35,7 @@ jobs:
             echo "CI_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
             echo "Signing with the fixed key: the APK installs as an update."
           else
-            echo "::warning::No DEBUG_KEYSTORE_B64 secret: random key, uninstall the old PwdMgr New before installing."
+            echo "::warning::No DEBUG_KEYSTORE_B64 secret: random key, uninstall the old test build before installing."
           fi
 
       - name: Build debug APK (installs alongside the existing app)
@@ -58,4 +58,4 @@ jobs:
             --prerelease \
             --target "$GITHUB_SHA" \
             --title "PwdMgr New (test build)" \
-            --notes "Installs as a separate app named 'PwdMgr New' next to the existing Password Manager; it does not replace it or touch its data. Debug-signed test build from branch ${GITHUB_REF_NAME} (${GITHUB_SHA::7})."
+            --notes "Installs as a separate app named 'Expense Tracker' (with Todo List and Password Manager inside) next to the existing Password Manager; it does not replace it or touch its data. Debug-signed test build from branch ${GITHUB_REF_NAME} (${GITHUB_SHA::7})."

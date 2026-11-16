@@ -49,7 +49,8 @@ class ApplicationManager : Application() {
 
         // Initialize default expense categories
         CoroutineScope(Dispatchers.IO).launch {
-            RealmService.getInstance().initializeDefaultCategories()
+            RealmService.getInstance().initializeDefaultCategories(
+                com.androplus.pwdmgr.services.RemovedCategories.get(this@ApplicationManager))
             // One time after an update that improves the rules: fix entries saved
             // earlier (e.g. everything unrecognised filed under Shopping).
             val prefs = getSharedPreferences("MyPrefs", Context.MODE_PRIVATE)

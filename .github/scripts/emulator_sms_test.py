@@ -99,7 +99,7 @@ def main():
     # Some versions open on a PIN screen, others straight on the module menu.
     end = time.time() + 40
     while time.time() < end:
-        if find("expenseTrackerTile") is not None:
+        if find("expenseTrackerTile") is not None or find("expenseRecyclerView") is not None:
             break
         if find("firstPinView") is not None:
             tap(find("firstPinView"))
@@ -107,7 +107,9 @@ def main():
             tap(wait_for("confirmPin"))
             adb("shell", "input", "text", PIN)
         time.sleep(1)
-    tap(wait_for("expenseTrackerTile"))
+    # The app opens straight on the Expense Tracker; older builds show a menu first.
+    if find("expenseRecyclerView") is None:
+        tap(wait_for("expenseTrackerTile"))
     wait_for("expenseRecyclerView")
     time.sleep(2)
     shot("1-expense-list-empty")

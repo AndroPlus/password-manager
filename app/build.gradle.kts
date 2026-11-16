@@ -51,7 +51,7 @@ android {
         debug {
             applicationIdSuffix = ".newapp"
             versionNameSuffix = "-new"
-            manifestPlaceholders["appLabel"] = "PwdMgr New"
+            manifestPlaceholders["appLabel"] = "Expense Tracker"
             if (ciKeystore != null) signingConfig = signingConfigs.getByName("ciDebug")
         }
 

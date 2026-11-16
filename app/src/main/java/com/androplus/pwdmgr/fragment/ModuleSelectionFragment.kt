@@ -38,6 +38,18 @@ class ModuleSelectionFragment : Fragment() {
         binding.todoModuleTile.setOnClickListener {
             findNavController().navigate(R.id.action_selection_to_todo)
         }
+
+        // Expense Tracker is the main module: open it straight away when the app
+        // starts. Back from it returns here for Todo List and Password Manager.
+        if (!openedExpensesAtLaunch) {
+            openedExpensesAtLaunch = true
+            findNavController().navigate(R.id.action_selection_to_expenses)
+        }
+    }
+
+    companion object {
+        // Once per app process, so pressing Back to this menu doesn't reopen expenses.
+        private var openedExpensesAtLaunch = false
     }
 
     override fun onResume() {

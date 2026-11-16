@@ -147,6 +147,39 @@ class RealmService private constructor() {
         }
     }
 
+    /**
+     * Removes [category] after moving its transactions to [targetName] ("Other"),
+     * creating that category if needed. Budgets for the removed category go too.
+     * Returns how many transactions were moved, or null on failure.
+     */
+    suspend fun deleteCategoryMovingTransactions(category: ExpenseCategory, targetName: String = "Other"): Int? {
+        if (category.name.equals(targetName, ignoreCase = true)) return null
+        if (getAllCategories().none { it.name.equals(targetName, ignoreCase = true) }) {
+            createCategory(ExpenseCategory().apply {
+                name = targetName; icon = "other"; color = "#BDBDBD"; isDefault = true
+            })
+        }
+        return try {
+            realm.write {
+                val target = query<ExpenseCategory>("name ==[c] $0", targetName).first().find()
+                    ?: return@write null
+                val id = category._id.toHexString()
+                val moving = query<ExpenseTransaction>("categoryId == $0 OR categoryName == $1", id, category.name).find()
+                for (t in moving) {
+                    t.categoryId = target._id.toHexString()
+                    t.categoryName = target.name
+                    t.categoryColor = target.color
+                }
+                delete(query<ExpenseBudget>("categoryId == $0", id).find())
+                query<ExpenseCategory>("_id == $0", category._id).first().find()?.let { delete(it) }
+                moving.size
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+
     fun getAllCategories(): List<ExpenseCategory> {
         return realm.query<ExpenseCategory>().find().toList()
     }
@@ -164,8 +197,10 @@ class RealmService private constructor() {
      * categories introduced in later versions reach existing installs too. Never
      * renames or removes the user's own categories.
      */
-    suspend fun initializeDefaultCategories() {
-        val existing = getAllCategories().mapTo(HashSet()) { it.name.lowercase() }
+    suspend fun initializeDefaultCategories(removedByUser: Set<String> = emptySet()) {
+        // Defaults the user removed stay removed ("Other" is always kept).
+        val existing = getAllCategories().mapTo(HashSet()) { it.name.lowercase() } +
+            removedByUser.map { it.lowercase() }.filter { it != "other" }
         val defaults = listOf(
             Triple("Food & Dining", "food", "#FF6B6B"),
             Triple("Groceries", "groceries", "#8BC34A"),

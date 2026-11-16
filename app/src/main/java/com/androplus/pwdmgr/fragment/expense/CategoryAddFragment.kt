@@ -89,6 +89,7 @@ class CategoryAddFragment : Fragment() {
         lifecycleScope.launch {
             val success = RealmService.getInstance().createCategory(category)
             if (success) {
+                com.androplus.pwdmgr.services.RemovedCategories.remove(requireContext(), name)
                 Toast.makeText(context, R.string.category_saved, Toast.LENGTH_SHORT).show()
                 findNavController().popBackStack()
             } else {

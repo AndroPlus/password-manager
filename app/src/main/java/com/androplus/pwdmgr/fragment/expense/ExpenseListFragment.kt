@@ -109,6 +109,10 @@ class ExpenseListFragment : Fragment() {
             findNavController().navigate(R.id.action_expense_list_to_analytics)
         }
 
+        binding.btnCategories.setOnClickListener {
+            findNavController().navigate(R.id.CategoryListFragment)
+        }
+
         binding.btnBudgets.setOnClickListener {
             findNavController().navigate(R.id.action_expense_list_to_budget)
         }
