@@ -215,6 +215,9 @@ def main():
     wait_for("insightsBars")
     time.sleep(2)
     shot("6-insights")
+    adb("shell", "input", "swipe", "160", "500", "160", "150", "300")   # "Most paid" is below the fold
+    time.sleep(1)
+    shot("7-insights-scrolled")
     texts = [n.get("text") or "" for n in ui_nodes()]
     check(any("AMAZON" in t for t in texts), "insights lists most-paid payees")
 
