@@ -50,6 +50,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     companion object {
         private const val REQUEST_READ_SMS = 102
+        private const val REQUEST_NOTIFICATIONS = 103
     }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
@@ -67,7 +68,40 @@ class SettingsFragment : PreferenceFragmentCompat() {
         super.onResume()
         updateSyncSummary()
         updateNotificationStatus()
+        updatePromptStatus()
     }
+
+    private fun updatePromptStatus() {
+        val ctx = requireContext()
+        val min = com.androplus.pwdmgr.services.AppPrefs.promptMinAmount(ctx).toLong()
+        findPreference<Preference>("test_category_prompt")?.summary =
+            com.androplus.pwdmgr.services.CategoryPrompt.blockedReason(ctx)
+                ?: "Working. New payees paid ₹$min or more notify you; smaller ones wait on Home. Tap to send a test."
+    }
+
+    private fun checkCategoryPrompt() {
+        val ctx = requireContext()
+        val reason = com.androplus.pwdmgr.services.CategoryPrompt.blockedReason(ctx)
+        when {
+            reason == null -> {
+                com.androplus.pwdmgr.services.CategoryPrompt.sendTest(ctx)
+                Toast.makeText(ctx, "Test notification sent", Toast.LENGTH_SHORT).show()
+            }
+            reason.startsWith("Turned off") -> Toast.makeText(ctx, reason, Toast.LENGTH_LONG).show()
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED && !askedNotificationPermission -> {
+                askedNotificationPermission = true
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS)
+            }
+            else -> startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+            )
+        }
+    }
+
+    private var askedNotificationPermission = false
 
     private fun updateNotificationStatus() {
         val ctx = requireContext()
@@ -260,6 +294,10 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 )
                 return true
             }
+            "test_category_prompt" -> {
+                checkCategoryPrompt()
+                return true
+            }
             "recheck_categories" -> {
                 recheckCategories()
                 return true
@@ -353,6 +391,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        if (requestCode == REQUEST_NOTIFICATIONS) {
+            updatePromptStatus()
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) checkCategoryPrompt()
+            else Toast.makeText(context, "Without notifications, new payees only show on Home.", Toast.LENGTH_LONG).show()
+            return
+        }
         if (requestCode == REQUEST_READ_SMS) {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
                 chooseImportPeriod()
