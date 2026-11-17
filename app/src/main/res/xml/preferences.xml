@@ -29,6 +29,11 @@
             android:summary="When you pay a new shop or person, a notification asks its category once"
             android:title="Ask category for new payees" />
 
+        <Preference
+            android:dependency="ask_category_for_new_payees"
+            android:key="test_category_prompt"
+            android:title="Check new-payee notifications" />
+
         <EditTextPreference
             android:defaultValue="200"
             android:dependency="ask_category_for_new_payees"

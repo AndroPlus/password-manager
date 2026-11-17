@@ -17,9 +17,15 @@ class CategoryActionReceiver : BroadcastReceiver() {
         const val EXTRA_PAYEE = "payee"
         const val EXTRA_CATEGORY = "category"
         const val EXTRA_NOTIFICATION_ID = "notification_id"
+        const val EXTRA_TEST = "test"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.getBooleanExtra(EXTRA_TEST, false)) {
+            NotificationManagerCompat.from(context).cancel(intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0))
+            Toast.makeText(context, "Test prompt works. Real ones file the payee.", Toast.LENGTH_SHORT).show()
+            return
+        }
         val payee = intent.getStringExtra(EXTRA_PAYEE) ?: return
         val category = intent.getStringExtra(EXTRA_CATEGORY) ?: return
         NotificationManagerCompat.from(context).cancel(intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0))
