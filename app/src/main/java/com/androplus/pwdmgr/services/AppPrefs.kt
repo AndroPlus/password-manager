@@ -27,5 +27,5 @@ object AppPrefs {
 
     /** New-payee notifications only for payments of at least this much (rest wait on Home). */
     fun promptMinAmount(c: Context): Double =
-        prefs(c).getString(PROMPT_MIN_AMOUNT, null)?.toDoubleOrNull() ?: 200.0
+        prefs(c).getString(PROMPT_MIN_AMOUNT, null)?.toDoubleOrNull() ?: 0.0
 }

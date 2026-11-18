@@ -84,6 +84,9 @@ object CategoryPrompt {
             .setContentIntent(open)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            // Heads-up over whichever app is open (GPay, PhonePe…) needs sound/vibration on older Android.
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
         listOf("Groceries", "Food & Dining").forEachIndexed { i, label ->
             val pi = PendingIntent.getBroadcast(
                 context, id * 4 + i,
@@ -132,6 +135,9 @@ object CategoryPrompt {
             .setContentIntent(openEditor)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
+            // Heads-up over whichever app is open (GPay, PhonePe…) needs sound/vibration on older Android.
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
 
         choices.forEachIndexed { i, category ->
             val pi = PendingIntent.getBroadcast(

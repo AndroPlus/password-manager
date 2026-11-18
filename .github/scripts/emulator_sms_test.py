@@ -192,6 +192,13 @@ def main():
     wait_for("categoryChips")
     time.sleep(1)
     shot("3b-edit-screen")
+    captured = find("capturedPayeeText")
+    check(captured is not None and captured.get("text") == "AMAZON",
+          f"payee from the message shown fixed ({captured.get('text') if captured is not None else None!r})")
+    tap(wait_for("shortDescriptionEditText"))
+    adb("shell", "input", "text", "Amazon%sIndia")       # %s = space for adb input
+    adb("shell", "input", "keyevent", "4")             # close the keyboard
+    time.sleep(1)
     cash = find(text="Cash")
     for _ in range(4):                          # category chips may be below the fold
         if cash is not None:
@@ -218,6 +225,8 @@ def main():
     tap(wait_for(text="Home"))
     wait_for("homeSpentText")
     time.sleep(1)
+    texts = [n.get("text") or "" for n in ui_nodes()]
+    check("Amazon India" in texts, "your own payee name is shown on Home")
     tap(wait_for("homePayeeBanner"))
     wait_for("sheetSave")
     time.sleep(1)
