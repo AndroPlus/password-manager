@@ -128,10 +128,11 @@ object CategoryPrompt {
         val builder = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("$amount to $name")
-            .setContentText("Saved under ${expense.categoryName.ifBlank { "Other" }}. Pick its category once; the app will remember.")
+            .setContentText("Saved under ${expense.categoryName.ifBlank { "Other" }}. Pick a category, add a new one, or tap for all.")
             .setStyle(NotificationCompat.BigTextStyle().bigText(
                 "Saved under ${expense.categoryName.ifBlank { "Other" }}. " +
-                    "Pick the right category once — later payments to $name will go there automatically."))
+                    "Pick its category once — later payments to $name go there automatically. " +
+                    "Not listed? Tap + New category, or tap here to see them all."))
             .setContentIntent(openEditor)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -150,7 +151,25 @@ object CategoryPrompt {
             )
             builder.addAction(0, category, pi)
         }
-        builder.addAction(0, "Other…", openEditor)
+        // Not listed? Type a new category right in the notification.
+        val newCategory = PendingIntent.getBroadcast(
+            context, id * 4 + 3,
+            Intent(context, CategoryActionReceiver::class.java)
+                .putExtra(CategoryActionReceiver.EXTRA_PAYEE, payee)
+                .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
+            // Mutable: Android writes the typed text into this intent.
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,
+        )
+        builder.addAction(
+            NotificationCompat.Action.Builder(0, "+ New category", newCategory)
+                .addRemoteInput(
+                    androidx.core.app.RemoteInput.Builder(CategoryActionReceiver.KEY_NEW_CATEGORY)
+                        .setLabel("New category, e.g. Tea & Snacks")
+                        .build()
+                )
+                .setAllowGeneratedReplies(false)
+                .build()
+        )
 
         NotificationManagerCompat.from(context).notify(id, builder.build())
     }
