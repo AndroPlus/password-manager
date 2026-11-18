@@ -59,7 +59,7 @@ class SettingsFragment : PreferenceFragmentCompat() {
         findPreference<EditTextPreference>("prompt_min_amount")?.apply {
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER }
             summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
-                "₹" + (p.text?.takeIf { it.isNotBlank() } ?: "200")
+                "₹" + (p.text?.takeIf { it.isNotBlank() } ?: "0") + " (0 = every new payee)"
             }
         }
     }
@@ -76,7 +76,8 @@ class SettingsFragment : PreferenceFragmentCompat() {
         val min = com.androplus.pwdmgr.services.AppPrefs.promptMinAmount(ctx).toLong()
         findPreference<Preference>("test_category_prompt")?.summary =
             com.androplus.pwdmgr.services.CategoryPrompt.blockedReason(ctx)
-                ?: "Working. New payees paid ₹$min or more notify you; smaller ones wait on Home. Tap to send a test."
+                ?: (if (min <= 0) "Working: every new payee pops up a notification. Tap to send a test."
+                else "Working: new payees paid ₹$min or more pop up; smaller ones wait on Home. Tap to send a test.")
     }
 
     private fun checkCategoryPrompt() {

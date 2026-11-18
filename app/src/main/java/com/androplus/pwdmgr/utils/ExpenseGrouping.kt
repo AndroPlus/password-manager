@@ -44,8 +44,17 @@ object ExpenseGrouping {
      * "[GPay] swiggy" → "Swiggy". Auto entries carry a source tag and often a
      * lower-case UPI handle; manual entries are shown as the user typed them.
      */
+    /** Your own name for an auto-captured payee, if you gave one (set at app start). */
+    @Volatile
+    var nicknameOf: (String) -> String? = { null }
+
+    /** Name as captured from the message, without the source tag or your nickname. */
+    fun capturedName(shortDescription: String): String =
+        shortDescription.replace(Regex("""^\[[A-Za-z]+]\s*"""), "").trim()
+
     fun displayTitle(shortDescription: String, categoryName: String): String {
         val source = DuplicateDetector.sourceOf(shortDescription)
+        if (source != null) nicknameOf(shortDescription)?.let { return it }
         var name = shortDescription.replace(Regex("""^\[[A-Za-z]+]\s*"""), "").trim()
         if (name.isEmpty()) return categoryName.ifBlank { "Transaction" }
         if (source != null && name == name.lowercase()) {

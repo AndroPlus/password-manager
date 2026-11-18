@@ -46,6 +46,7 @@ class ApplicationManager : Application() {
         }
         RealmService.getInstance(key);
         com.androplus.pwdmgr.services.AutoTransactionRecorder.init(this)
+        com.androplus.pwdmgr.services.Nicknames.init(this)
 
         // Initialize default expense categories
         CoroutineScope(Dispatchers.IO).launch {

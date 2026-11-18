@@ -35,7 +35,7 @@
             android:title="Check new-payee notifications" />
 
         <EditTextPreference
-            android:defaultValue="200"
+            android:defaultValue="0"
             android:dependency="ask_category_for_new_payees"
             android:dialogMessage="Smaller payments to new payees wait in the Home banner instead of notifying you."
             android:key="prompt_min_amount"

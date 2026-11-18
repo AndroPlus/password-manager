@@ -15,6 +15,7 @@ import com.androplus.pwdmgr.model.ExpenseCategory
 import com.androplus.pwdmgr.model.ExpenseTransaction
 import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.services.AutoTransactionRecorder
+import com.androplus.pwdmgr.services.Nicknames
 import com.androplus.pwdmgr.utils.DuplicateDetector
 import com.androplus.pwdmgr.utils.ExpenseGrouping
 import kotlinx.coroutines.launch
@@ -134,9 +135,17 @@ class ExpenseAddFragment : Fragment() {
                     if (expense.amount % 1.0 == 0.0) expense.amount.toLong().toString() else expense.amount.toString())
                 binding.descriptionEditText.setText(expense.description)
                 sourceTag = DuplicateDetector.sourceOf(expense.shortDescription)
-                binding.shortDescriptionEditText.setText(
-                    expense.shortDescription.replace(Regex("""^\[[A-Za-z]+]\s*"""), ""))
-                if (sourceTag != null) binding.descriptionLayout.hint = "Original message"
+                if (sourceTag != null) {
+                    // Captured entry: the bank's payee name is fixed; your own name is optional.
+                    binding.capturedPayeeLayout.visibility = View.VISIBLE
+                    binding.capturedPayeeText.setText(ExpenseGrouping.capturedName(expense.shortDescription))
+                    binding.nameLayout.hint = "Your name for it (optional), e.g. KFC"
+                    binding.nameLayout.helperText = "Shown instead, for every payment to this payee"
+                    binding.shortDescriptionEditText.setText(Nicknames.get(expense.shortDescription) ?: "")
+                    binding.descriptionLayout.hint = "Original message"
+                } else {
+                    binding.shortDescriptionEditText.setText(expense.shortDescription)
+                }
                 selectedCalendar.timeInMillis = expense.date
                 binding.dateButton.text = dateFormat.format(selectedCalendar.time)
                 
@@ -190,7 +199,9 @@ class ExpenseAddFragment : Fragment() {
         }
         val description = binding.descriptionEditText.text.toString()
         val typedName = binding.shortDescriptionEditText.text.toString().trim()
-        val shortDescription = sourceTag?.let { DuplicateDetector.tag(it, typedName) } ?: typedName
+        // Captured entries keep the payee from the message; the typed text is only a nickname.
+        val shortDescription = if (sourceTag != null) originalShortDescription else typedName
+        if (sourceTag != null) Nicknames.set(originalShortDescription, typedName)
         val type = if (binding.radioIncome.isChecked) "INCOME" else "EXPENSE"
 
         val expenseToSave = ExpenseTransaction().apply {
@@ -242,10 +253,6 @@ class ExpenseAddFragment : Fragment() {
         AutoTransactionRecorder.init(appContext)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val moved = AutoTransactionRecorder.learn(payee, isExpense, categoryName)
-            // A renamed payee should also match under its new name.
-            if (isAuto && shortDescription.isNotBlank() && shortDescription != originalShortDescription) {
-                AutoTransactionRecorder.learn(shortDescription, isExpense, categoryName)
-            }
             if (moved == null) return@launch   // too generic to learn, e.g. "UPI payment"
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 val extra = if (moved > 0) " Moved $moved earlier one(s) too." else ""
