@@ -98,7 +98,48 @@ class ExpenseAddFragment : Fragment() {
             }
             group.addView(chip)
         }
+        group.addView(com.google.android.material.chip.Chip(requireContext()).apply {
+            id = View.generateViewId()
+            text = "New category"
+            isCheckable = false
+            chipIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_plus)
+            chipIconTint = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.accent))
+            isChipIconVisible = true
+            chipBackgroundColor = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+            chipStrokeWidth = resources.displayMetrics.density
+            chipStrokeColor = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.accent))
+            setTextColor(requireContext().getColor(R.color.accent))
+            setOnClickListener { addCategory() }
+        })
         selectCategory(categories.indexOfFirst { it.name == "Other" }.takeIf { it >= 0 } ?: 0)
+    }
+
+    /** Type a name; the category is created and picked for this transaction. */
+    private fun addCategory() {
+        val ctx = requireContext()
+        val input = android.widget.EditText(ctx).apply {
+            hint = "e.g. Tea & Snacks"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.FrameLayout(ctx).apply { setPadding(pad, pad / 2, pad, 0); addView(input) }
+        android.app.AlertDialog.Builder(ctx)
+            .setTitle("New category")
+            .setView(box)
+            .setPositiveButton("Add") { _, _ ->
+                val typed = input.text.toString()
+                lifecycleScope.launch {
+                    val name = com.androplus.pwdmgr.services.Categories.ensure(ctx.applicationContext, typed)
+                        ?: return@launch
+                    if (_binding == null) return@launch
+                    val keepIndex = selectedCategoryIndex
+                    loadCategories()
+                    val i = categories.indexOfFirst { it.name == name }
+                    selectCategory(if (i >= 0) i else keepIndex)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun selectCategory(index: Int) {

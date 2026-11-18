@@ -18,6 +18,8 @@ class CategoryActionReceiver : BroadcastReceiver() {
         const val EXTRA_CATEGORY = "category"
         const val EXTRA_NOTIFICATION_ID = "notification_id"
         const val EXTRA_TEST = "test"
+        /** Text typed into the notification's "+ New category" box. */
+        const val KEY_NEW_CATEGORY = "new_category"
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -27,7 +29,10 @@ class CategoryActionReceiver : BroadcastReceiver() {
             return
         }
         val payee = intent.getStringExtra(EXTRA_PAYEE) ?: return
-        val category = intent.getStringExtra(EXTRA_CATEGORY) ?: return
+        val typed = androidx.core.app.RemoteInput.getResultsFromIntent(intent)
+            ?.getCharSequence(KEY_NEW_CATEGORY)?.toString()
+        val picked = intent.getStringExtra(EXTRA_CATEGORY)
+        if (typed.isNullOrBlank() && picked == null) return
         NotificationManagerCompat.from(context).cancel(intent.getIntExtra(EXTRA_NOTIFICATION_ID, 0))
 
         val pending = goAsync()
@@ -35,6 +40,9 @@ class CategoryActionReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 AutoTransactionRecorder.init(app)
+                // A typed name creates the category (or reuses one with that name).
+                val category = if (!typed.isNullOrBlank()) Categories.ensure(app, typed) else picked
+                if (category == null) return@launch
                 // Learns the payee and moves this and any earlier entries from it.
                 AutoTransactionRecorder.learn(payee, true, category)
                 withContext(Dispatchers.Main) {
