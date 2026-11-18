@@ -38,7 +38,7 @@ class ExpenseListFragment : Fragment() {
     private val currencyFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN"))
     private val summaryFormat = NumberFormat.getCurrencyInstance(Locale("en", "IN")).apply { maximumFractionDigits = 0 }
 
-    private var currentFilter = "THIS_MONTH"
+    private var currentFilter = "TODAY"
     private var loaded: List<ExpenseTransaction> = emptyList()
     // Chosen with the date picker: local start of the first day, end of the last day.
     private var customStart = 0L
@@ -101,6 +101,7 @@ class ExpenseListFragment : Fragment() {
         binding.fabAddExpense.setOnClickListener { findNavController().navigate(R.id.ExpenseAddFragment) }
         binding.chipAllTime.setOnClickListener { setFilter("ALL") }
         binding.chipToday.setOnClickListener { setFilter("TODAY") }
+        binding.chipYesterday.setOnClickListener { setFilter("YESTERDAY") }
         binding.chipThisMonth.setOnClickListener { setFilter("THIS_MONTH") }
         binding.chipLastMonth.setOnClickListener { setFilter("LAST_MONTH") }
         binding.chipPickDates.setOnClickListener { showDatePicker() }
@@ -146,10 +147,11 @@ class ExpenseListFragment : Fragment() {
         if (_binding == null) return
         when (currentFilter) {
             "ALL" -> binding.chipAllTime
-            "TODAY" -> binding.chipToday
+            "THIS_MONTH" -> binding.chipThisMonth
+            "YESTERDAY" -> binding.chipYesterday
             "LAST_MONTH" -> binding.chipLastMonth
             "CUSTOM" -> binding.chipPickDates
-            else -> binding.chipThisMonth
+            else -> binding.chipToday
         }.isChecked = true
     }
 
@@ -169,6 +171,7 @@ class ExpenseListFragment : Fragment() {
         val realm = RealmService.getInstance()
         loaded = when (currentFilter) {
             "TODAY" -> periodRange(Calendar.DAY_OF_MONTH, 0).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
+            "YESTERDAY" -> periodRange(Calendar.DAY_OF_MONTH, -1).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
             "THIS_MONTH" -> periodRange(Calendar.MONTH, 0).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
             "LAST_MONTH" -> periodRange(Calendar.MONTH, -1).let { (s, e) -> realm.getExpensesByDateRange(s, e) }
             "CUSTOM" -> realm.getExpensesByDateRange(customStart, customEnd)
@@ -184,7 +187,7 @@ class ExpenseListFragment : Fragment() {
     }
 
     /**
-     * Start and end (inclusive, whole period) of today, or of this/last month.
+     * Start and end (inclusive, whole period) of today/yesterday, or of this/last month.
      * The end is the period's last millisecond, not "now", so an entry saved a
      * moment after loading still falls inside the range.
      */
@@ -193,6 +196,8 @@ class ExpenseListFragment : Fragment() {
             if (unit == Calendar.MONTH) {
                 add(Calendar.MONTH, offset)
                 set(Calendar.DAY_OF_MONTH, 1)
+            } else {
+                add(Calendar.DAY_OF_MONTH, offset)   // -1 = yesterday
             }
             set(Calendar.HOUR_OF_DAY, 0)
             set(Calendar.MINUTE, 0)
