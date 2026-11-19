@@ -56,6 +56,14 @@ class SettingsFragment : PreferenceFragmentCompat() {
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
         setupServerSyncPreferences()
+        // Expense Tracker app: no server upload and no password export (those belong
+        // to the FinIntel server and the Password Manager).
+        if (!com.androplus.pwdmgr.BuildConfig.SERVER_SYNC) {
+            findPreference<Preference>("category_server_sync")?.isVisible = false
+        }
+        if (com.androplus.pwdmgr.BuildConfig.EXPENSE_ONLY) {
+            findPreference<Preference>("category_general")?.isVisible = false
+        }
         findPreference<EditTextPreference>("prompt_min_amount")?.apply {
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER }
             summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->

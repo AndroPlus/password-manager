@@ -46,17 +46,19 @@ object ExpenseTabs {
 
     private fun showMore(fragment: Fragment, anchor: View) {
         val menu = PopupMenu(fragment.requireContext(), anchor)
-        val items = listOf(
+        val items = mutableListOf<Pair<String, () -> Unit>>(
             "Bills & reminders" to { fragment.findNavController().navigate(R.id.BillsFragment) },
             "Sort your payees" to { fragment.findNavController().navigate(R.id.PayeeSortFragment) },
             "Categories" to { fragment.findNavController().navigate(R.id.CategoryListFragment) },
             "Budgets" to { fragment.findNavController().navigate(R.id.BudgetFragment) },
-            "Todo list" to { fragment.findNavController().navigate(R.id.TodoListFragment) },
-            "Password manager" to { fragment.findNavController().navigate(R.id.LoginFragment) },
             "Settings" to {
                 fragment.startActivity(Intent(fragment.requireContext(), SettingsActivity::class.java))
             },
         )
+        if (!com.androplus.pwdmgr.BuildConfig.EXPENSE_ONLY) {
+            items.add(items.size - 1, "Todo list" to { fragment.findNavController().navigate(R.id.TodoListFragment) })
+            items.add(items.size - 1, "Password manager" to { fragment.findNavController().navigate(R.id.LoginFragment) })
+        }
         items.forEachIndexed { i, (title, _) -> menu.menu.add(0, i, i, title) }
         menu.setOnMenuItemClickListener { mi -> items[mi.itemId].second(); true }
         menu.show()

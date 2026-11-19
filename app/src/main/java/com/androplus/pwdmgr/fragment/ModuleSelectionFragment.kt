@@ -41,6 +41,15 @@ class ModuleSelectionFragment : Fragment() {
 
         // Expense Tracker is the main module: open it straight away when the app
         // starts. Back from it returns here for Todo List and Password Manager.
+        if (com.androplus.pwdmgr.BuildConfig.EXPENSE_ONLY) {
+            // Expense Tracker app: no module menu; this screen is replaced so Back leaves the app.
+            val options = androidx.navigation.NavOptions.Builder()
+                .setPopUpTo(R.id.ModuleSelectionFragment, true).build()
+            val target = if (com.androplus.pwdmgr.services.AppPrefs.onboardingDone(requireContext()))
+                R.id.ExpenseHomeFragment else R.id.OnboardingFragment
+            findNavController().navigate(target, null, options)
+            return
+        }
         if (!openedExpensesAtLaunch) {
             openedExpensesAtLaunch = true
             if (com.androplus.pwdmgr.services.AppPrefs.onboardingDone(requireContext())) {
