@@ -61,7 +61,9 @@
             android:title="Import past SMS" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Server sync (FinIntel)">
+    <PreferenceCategory
+        android:key="category_server_sync"
+        android:title="Server sync (FinIntel)">
         <SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="server_sync_enabled"
@@ -88,7 +90,9 @@
             android:title="Sync now" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="General">
+    <PreferenceCategory
+        android:key="category_general"
+        android:title="General">
         <Preference
             android:key="download_option"
             android:title="Export Data" />

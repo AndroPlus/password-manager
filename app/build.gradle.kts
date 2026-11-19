@@ -45,6 +45,9 @@ android {
                 "proguard-rules.pro"
             )
             manifestPlaceholders["appLabel"] = "@string/app_name"
+            // The Password Manager app: every module, no server upload.
+            buildConfigField("boolean", "EXPENSE_ONLY", "false")
+            buildConfigField("boolean", "SERVER_SYNC", "false")
         }
         // A separate app ID so this build installs next to the existing Password
         // Manager instead of replacing it; each app keeps its own data.
@@ -52,6 +55,10 @@ android {
             applicationIdSuffix = ".newapp"
             versionNameSuffix = "-new"
             manifestPlaceholders["appLabel"] = "Expense Tracker"
+            // The Expense Tracker app: Todo and Password Manager hidden, and the
+            // FinIntel server upload hidden for now (the code stays, switched off).
+            buildConfigField("boolean", "EXPENSE_ONLY", "true")
+            buildConfigField("boolean", "SERVER_SYNC", "false")
             if (ciKeystore != null) signingConfig = signingConfigs.getByName("ciDebug")
         }
 
@@ -65,6 +72,7 @@ android {
         jvmTarget = "17"
     }
     buildFeatures {
+        buildConfig = true
         compose = true
         viewBinding = true
     }
