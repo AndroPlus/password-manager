@@ -179,7 +179,9 @@ object AutoTransactionRecorder {
             val r = AutoReclassifier.reclassify(source, e.description, names) ?: continue
             val chosen = memory?.categoryFor(r.merchant, r.isExpense)?.takeIf { it in names } ?: r.category
             val cat = categories.find { it.name == chosen } ?: continue
-            val newShort = DuplicateDetector.tag(if (source == "Auto") "SMS" else source, r.merchant)
+            // A receipt re-read without its sender header can't name the merchant: keep the old name.
+            val merchant = if (r.merchant == "Merchant payment") ExpenseGrouping.capturedName(e.shortDescription) else r.merchant
+            val newShort = DuplicateDetector.tag(if (source == "Auto") "SMS" else source, merchant)
             val newType = if (r.isExpense) "EXPENSE" else "INCOME"
             if (newShort == e.shortDescription && cat.name == e.categoryName && newType == e.type) continue
             val updated = copyOf(e).apply {

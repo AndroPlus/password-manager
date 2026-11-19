@@ -13,6 +13,7 @@ import com.androplus.pwdmgr.services.ServerSync
 import com.androplus.pwdmgr.utils.InboxSms
 import com.androplus.pwdmgr.utils.OutboundMessage
 import com.androplus.pwdmgr.utils.SmsHistory
+import com.androplus.pwdmgr.utils.RECEIPT_SOURCE
 import com.androplus.pwdmgr.utils.TransactionParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
@@ -39,6 +40,8 @@ class SmsHistoryWorker(appContext: Context, params: WorkerParameters) :
         val jobs = bankSms.mapNotNull { sms ->
             TransactionParser.parseSms(sms.body)?.let { parsed ->
                 AutoTransactionRecorder.record(parsed, "SMS", sms.body, at = sms.sentAt, ask = false)
+            } ?: TransactionParser.parseMerchantReceipt(sms.body, sms.sender)?.let { receipt ->
+                AutoTransactionRecorder.record(receipt, RECEIPT_SOURCE, sms.body, at = sms.sentAt, ask = false)
             }
         }
         jobs.joinAll()

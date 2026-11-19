@@ -44,6 +44,9 @@ object TransactionCategorizer {
             "burger king", "haldiram", "saravana bhavan", "a2b", "hotel", "mess", "biryani",
             "briyani", "sweets", "tea", "teastall", "coffee", "juice", "cooldrinks", "snacks",
             "tiffin", "canteen", "food", "foods", "soup"), listOf("Food & Dining", "Food")),
+        // Cooking gas before fuel: an LPG booking paid through HP PAY is a home bill.
+        Rule(listOf("lpg", "gas booking", "cylinder", "refill order", "indane", "hp gas", "bharat gas",
+            "bharatgas"), listOf("Bills & Utilities", "Utilities", "Bills", "Housing")),
         Rule(listOf("petrol", "fuel", "hp pay", "hppay", "indian oil", "iocl", "ioc", "bpcl",
             "hpcl", "shell", "nayara", "filling"), listOf("Fuel", "Transportation")),
         Rule(listOf("uber", "ola", "rapido", "irctc", "redbus", "metro", "fastag", "parking",
@@ -102,6 +105,9 @@ object TransactionCategorizer {
 }
 
 /** Re-reads an auto-captured entry's original message with the current rules. */
+/** Source tag for merchant receipts: different from "SMS" so a matching bank SMS counts as the same payment. */
+const val RECEIPT_SOURCE = "Receipt"
+
 object AutoReclassifier {
 
     data class Result(val merchant: String, val isExpense: Boolean, val category: String?)
@@ -114,6 +120,7 @@ object AutoReclassifier {
         }
         val parsed = when (source) {
             "SMS" -> TransactionParser.parseSms(rawText)
+            RECEIPT_SOURCE -> TransactionParser.parseMerchantReceipt(rawText)
             "GPay", "PhonePe", "Paytm" -> notification()
             else -> TransactionParser.parseSms(rawText) ?: notification()
         } ?: return null
