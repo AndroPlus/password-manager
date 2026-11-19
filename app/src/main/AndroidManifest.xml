@@ -53,6 +53,10 @@
             android:name=".services.CategoryActionReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".services.BillActionReceiver"
+            android:exported="false" />
+
         <activity android:name=".SettingsActivity"/>
     </application>
 

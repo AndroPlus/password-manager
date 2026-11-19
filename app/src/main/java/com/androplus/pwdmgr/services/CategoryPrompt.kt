@@ -14,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.androplus.pwdmgr.MainActivity
 import com.androplus.pwdmgr.R
+import com.androplus.pwdmgr.ui.CategoryStyle
 import com.androplus.pwdmgr.model.ExpenseTransaction
 import com.androplus.pwdmgr.utils.CategoryMemory
 import com.androplus.pwdmgr.utils.ExpenseGrouping
@@ -77,28 +78,67 @@ object CategoryPrompt {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val builder = NotificationCompat.Builder(context, CHANNEL)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("₹250 to Test Shop")
-            .setContentText("Test: this is how a new payee asks for its category.")
-            .setContentIntent(open)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            // Heads-up over whichever app is open (GPay, PhonePe…) needs sound/vibration on older Android.
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setCategory(NotificationCompat.CATEGORY_REMINDER)
-        listOf("Groceries", "Food & Dining").forEachIndexed { i, label ->
-            val pi = PendingIntent.getBroadcast(
-                context, id * 4 + i,
+        val testPick = { _: String, i: Int ->
+            PendingIntent.getBroadcast(
+                context, id * 8 + i,
                 Intent(context, CategoryActionReceiver::class.java)
                     .putExtra(CategoryActionReceiver.EXTRA_TEST, true)
                     .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            builder.addAction(0, label, pi)
         }
-        builder.addAction(0, "Other…", open)
+        val sample = listOf("Groceries", "Food & Dining", "Shopping", "Transportation", "Healthcare")
+        val colors = com.androplus.pwdmgr.utils.CategoryPalette.COLORS
+        val title = "₹250 · Test Shop"
+        val builder = NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(title)
+            .setContentText("Test: which category? Tap to choose")
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomHeadsUpContentView(categoryTiles(context, R.layout.notif_category_row, 4, title, sample, colors, testPick, open))
+            .setCustomBigContentView(categoryTiles(context, R.layout.notif_category_grid, 6, title, sample, colors, testPick, open))
+            .setContentIntent(open)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+
         NotificationManagerCompat.from(context).notify(id, builder.build())
+    }
+
+    private val TILE_IDS = intArrayOf(R.id.tile0, R.id.tile1, R.id.tile2, R.id.tile3, R.id.tile4, R.id.tile5)
+    private val ICON_IDS = intArrayOf(R.id.icon0, R.id.icon1, R.id.icon2, R.id.icon3, R.id.icon4, R.id.icon5)
+    private val LABEL_IDS = intArrayOf(R.id.label0, R.id.label1, R.id.label2, R.id.label3, R.id.label4, R.id.label5)
+
+    /** [slots] tiles with icon + name: categories first, the last one always "More". */
+    private fun categoryTiles(
+        context: Context, layout: Int, slots: Int, title: String, choices: List<String>,
+        colors: Map<String, String>, pick: (String, Int) -> PendingIntent, more: PendingIntent,
+    ): android.widget.RemoteViews {
+        val rv = android.widget.RemoteViews(context.packageName, layout)
+        rv.setTextViewText(R.id.notifTitle, title)
+        val shown = choices.take(slots - 1)
+        for (i in 0 until slots) {
+            when {
+                i < shown.size -> {
+                    val c = shown[i]
+                    rv.setImageViewResource(ICON_IDS[i], CategoryStyle.icon(c))
+                    rv.setInt(ICON_IDS[i], "setColorFilter", CategoryStyle.color(colors[c] ?: "#737373"))
+                    rv.setTextViewText(LABEL_IDS[i], c)
+                    rv.setContentDescription(TILE_IDS[i], c)
+                    rv.setOnClickPendingIntent(TILE_IDS[i], pick(c, i))
+                }
+                i == shown.size -> {
+                    rv.setImageViewResource(ICON_IDS[i], R.drawable.ic_cat_other)
+                    rv.setInt(ICON_IDS[i], "setColorFilter", 0xFF808080.toInt())
+                    rv.setTextViewText(LABEL_IDS[i], "More")
+                    rv.setContentDescription(TILE_IDS[i], "All categories")
+                    rv.setOnClickPendingIntent(TILE_IDS[i], more)
+                }
+                else -> rv.setViewVisibility(TILE_IDS[i], android.view.View.GONE)
+            }
+        }
+        return rv
     }
 
     fun ask(context: Context, expense: ExpenseTransaction, payee: String, choices: List<String>) {
@@ -125,14 +165,27 @@ object CategoryPrompt {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        // Short text for the collapsed view; the category tiles do the rest.
+        val title = "$amount · $name"
+        val colors = RealmService.getInstance().getAllCategories().associate { it.name to it.color }
+        fun pick(category: String, i: Int) = PendingIntent.getBroadcast(
+            context, id * 8 + i,
+            Intent(context, CategoryActionReceiver::class.java)
+                .putExtra(CategoryActionReceiver.EXTRA_PAYEE, payee)
+                .putExtra(CategoryActionReceiver.EXTRA_CATEGORY, category)
+                .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        fun tiles(layout: Int, slots: Int) =
+            categoryTiles(context, layout, slots, title, choices, colors, ::pick, openEditor)
+
         val builder = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("$amount to $name")
-            .setContentText("Saved under ${expense.categoryName.ifBlank { "Other" }}. Pick a category, add a new one, or tap for all.")
-            .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "Saved under ${expense.categoryName.ifBlank { "Other" }}. " +
-                    "Pick its category once — later payments to $name go there automatically. " +
-                    "Not listed? Tap + New category, or tap here to see them all."))
+            .setContentTitle(title)
+            .setContentText("Which category? Tap to choose · we'll remember")
+            .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+            .setCustomHeadsUpContentView(tiles(R.layout.notif_category_row, 4))
+            .setCustomBigContentView(tiles(R.layout.notif_category_grid, 6))
             .setContentIntent(openEditor)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
@@ -140,20 +193,9 @@ object CategoryPrompt {
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
 
-        choices.forEachIndexed { i, category ->
-            val pi = PendingIntent.getBroadcast(
-                context, id * 4 + i,
-                Intent(context, CategoryActionReceiver::class.java)
-                    .putExtra(CategoryActionReceiver.EXTRA_PAYEE, payee)
-                    .putExtra(CategoryActionReceiver.EXTRA_CATEGORY, category)
-                    .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-            builder.addAction(0, category, pi)
-        }
         // Not listed? Type a new category right in the notification.
         val newCategory = PendingIntent.getBroadcast(
-            context, id * 4 + 3,
+            context, id * 8 + 7,
             Intent(context, CategoryActionReceiver::class.java)
                 .putExtra(CategoryActionReceiver.EXTRA_PAYEE, payee)
                 .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
