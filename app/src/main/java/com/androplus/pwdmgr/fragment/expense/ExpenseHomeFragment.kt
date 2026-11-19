@@ -63,6 +63,7 @@ class ExpenseHomeFragment : Fragment() {
         binding.homeMonthText.setOnClickListener { customRange = null; monthOffset = 0; load() }
         binding.homeDatesButton.setOnClickListener { pickDates() }
         binding.homeAddButton.setOnClickListener { findNavController().navigate(R.id.ExpenseAddFragment) }
+        binding.homeAllBills.setOnClickListener { findNavController().navigate(R.id.BillsFragment) }
         binding.homeAllCategories.setOnClickListener { binding.bottomNav.selectedItemId = R.id.tab_spending }
         binding.homeBudgetText.setOnClickListener { editBudget() }
         binding.homeDailyText.setOnClickListener { if (AppPrefs.monthlyBudget(requireContext()) == null) editBudget() }
@@ -176,6 +177,41 @@ class ExpenseHomeFragment : Fragment() {
             binding.homePayeeBannerText.text = if (todo.size == 1)
                 "1 new payee needs a category · ${money.format(total)}"
             else "${todo.size} new payees need a category · ${money.format(total)}"
+        }
+
+        // Coming up: unpaid bills due within 10 days (or overdue)
+        binding.homeBillsList.removeAllViews()
+        val bills = com.androplus.pwdmgr.services.Bills.statuses(requireContext())
+        val soon = bills.filter { !it.paid && it.daysLeft <= 10 }.take(3)
+        val inflaterBills = LayoutInflater.from(requireContext())
+        if (soon.isEmpty()) {
+            val row = inflaterBills.inflate(R.layout.home_recent_row, binding.homeBillsList, false)
+            row.findViewById<TextView>(R.id.recentInitials).visibility = View.GONE
+            row.findViewById<TextView>(R.id.recentTitle).text =
+                if (bills.isEmpty()) "Add EMIs, rent and bills to get reminders" else "Nothing due in the next 10 days"
+            row.findViewById<TextView>(R.id.recentSubtitle).text =
+                if (bills.isEmpty()) "Tap to add your first one" else "${bills.size} reminder${if (bills.size == 1) "" else "s"} set"
+            row.findViewById<TextView>(R.id.recentAmount).text = "›"
+            row.setOnClickListener { findNavController().navigate(R.id.BillsFragment) }
+            binding.homeBillsList.addView(row)
+        } else soon.forEach { st ->
+            val row = inflaterBills.inflate(R.layout.home_recent_row, binding.homeBillsList, false)
+            row.findViewById<TextView>(R.id.recentInitials).apply {
+                text = st.reminder.kind.take(1)
+                setTextColor(requireContext().getColor(if (st.daysLeft < 0) R.color.expense_red else R.color.accent))
+            }
+            row.findViewById<TextView>(R.id.recentTitle).text = st.reminder.name
+            row.findViewById<TextView>(R.id.recentSubtitle).apply {
+                text = com.androplus.pwdmgr.utils.ReminderMath.label(st)
+                setTextColor(requireContext().getColor(when {
+                    st.daysLeft < 0 -> R.color.expense_red
+                    st.daysLeft <= 3 -> R.color.warn_fg
+                    else -> R.color.ink_muted
+                }))
+            }
+            row.findViewById<TextView>(R.id.recentAmount).text = st.reminder.amount?.let { money.format(it) } ?: "Varies"
+            row.setOnClickListener { findNavController().navigate(R.id.BillsFragment) }
+            binding.homeBillsList.addView(row)
         }
 
         // Where it went

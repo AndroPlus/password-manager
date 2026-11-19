@@ -122,7 +122,7 @@ object AutoTransactionRecorder {
             val names = realmService.getAllCategories().map { it.name }
             val past = realmService.getAllExpenses().filter { it.type == "EXPENSE" }.map { it.categoryName }
             runCatching {
-                CategoryPrompt.ask(ctx, saved, parsed.merchant, PayeeSorting.quickChoices(saved.categoryName, past, names))
+                CategoryPrompt.ask(ctx, saved, parsed.merchant, PayeeSorting.quickChoices(saved.categoryName, past, names, max = 5))
             }.onFailure { Log.w(TAG, "Could not show category prompt", it) }
         }
     }

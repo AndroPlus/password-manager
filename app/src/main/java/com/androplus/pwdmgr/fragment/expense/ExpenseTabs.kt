@@ -47,6 +47,7 @@ object ExpenseTabs {
     private fun showMore(fragment: Fragment, anchor: View) {
         val menu = PopupMenu(fragment.requireContext(), anchor)
         val items = listOf(
+            "Bills & reminders" to { fragment.findNavController().navigate(R.id.BillsFragment) },
             "Sort your payees" to { fragment.findNavController().navigate(R.id.PayeeSortFragment) },
             "Categories" to { fragment.findNavController().navigate(R.id.CategoryListFragment) },
             "Budgets" to { fragment.findNavController().navigate(R.id.BudgetFragment) },
