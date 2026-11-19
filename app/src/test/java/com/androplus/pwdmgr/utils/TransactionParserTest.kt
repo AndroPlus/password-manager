@@ -86,9 +86,20 @@ class TransactionParserTest {
         assertEquals("ATM Withdrawal", t.merchant)
     }
 
-    @Test fun phoneNumberHandleIsNotShownAsMerchant() {
+    @Test fun digitsOnlyHandleKeepsTheWholeUpiIdAsPayee() {
         val t = sms("Rs 100 debited from a/c XX1234 to VPA 9876543210@ybl UPI")
-        assertEquals("UPI transfer", t.merchant)
+        assertEquals("9876543210@ybl", t.merchant)
+    }
+
+    @Test fun hdfcCardUpiToNumericHandleHasAPayee() {
+        // Fictional card / reference numbers.
+        val t = sms("Txn Rs.60.00\nOn HDFC Bank Card 1234\nAt *4321@ybl \nby UPI 100000000002\nOn 19-11\n" +
+            "Not You?\nCall 18002586161/SMS BLOCK CC 1234 to 7308080808")
+        assertEquals(60.0, t.amount, 0.001)
+        assertEquals(true, t.isExpense)
+        assertEquals("4321@ybl", t.merchant)
+        // A real payee, so it gets the new-payee prompt and can be named.
+        assertEquals("out:4321@ybl", CategoryMemory.key("[SMS] ${t.merchant}", true))
     }
 
     // ---- messages that must be ignored --------------------------------------

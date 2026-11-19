@@ -149,8 +149,9 @@ object TransactionParser {
         if (channel == "ATM") return "ATM Withdrawal"
         vpaRegex.find(text)?.groupValues?.get(1)?.let { vpa ->
             val handle = vpa.substringBefore("@")
-            // A bare phone-number handle says nothing useful about the payee.
-            return if (handle.all { it.isDigit() }) "UPI transfer" else handle
+            // A digits-only handle (a phone number or a short id) is still a distinct
+            // payee: keep the whole UPI id so it can be categorised and given a name.
+            return if (handle.all { it.isDigit() }) vpa.lowercase() else handle
         }
         (upiPathRegex.find(text) ?: upiNarrationRegex.find(text))?.let { m ->
             val name = m.groupValues[1].trim().trimEnd('.', ' ')
