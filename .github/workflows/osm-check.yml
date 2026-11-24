@@ -1,0 +1,12 @@
+name: OpenStreetMap coverage check
+
+on:
+  push:
+    branches: [claude/osm-check]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 .github/scripts/osm_check.py
