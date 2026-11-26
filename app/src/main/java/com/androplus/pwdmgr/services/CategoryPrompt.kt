@@ -152,8 +152,11 @@ object CategoryPrompt {
             return
         }
 
-        val id = notificationId(payee)
-        val name = ExpenseGrouping.displayTitle(payee, expense.categoryName)
+        val expenseIdForActions = expense._id.toHexString()
+        val unknownPayee = CategoryMemory.key(payee, true) == null
+        // Unknown payees get one notification per payment, not one shared one.
+        val id = if (unknownPayee) ("pay:$expenseIdForActions").hashCode() else notificationId(payee)
+        val name = if (unknownPayee) "Payee not in SMS" else ExpenseGrouping.displayTitle(payee, expense.categoryName)
         val amount = NumberFormat.getCurrencyInstance(Locale("en", "IN")).format(expense.amount)
         val expenseId = expense._id.toHexString()
 
@@ -172,17 +175,22 @@ object CategoryPrompt {
             context, id * 8 + i,
             Intent(context, CategoryActionReceiver::class.java)
                 .putExtra(CategoryActionReceiver.EXTRA_PAYEE, payee)
+                .putExtra(CategoryActionReceiver.EXTRA_EXPENSE_ID, expenseIdForActions)
                 .putExtra(CategoryActionReceiver.EXTRA_CATEGORY, category)
                 .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         fun tiles(layout: Int, slots: Int) =
-            categoryTiles(context, layout, slots, title, choices, colors, ::pick, openEditor)
+            categoryTiles(context, layout, slots, title, choices, colors, ::pick, openEditor).also {
+                if (unknownPayee && layout == R.layout.notif_category_grid)
+                    it.setTextViewText(R.id.notifSubtitle, "No payee in the SMS · applies to this payment only")
+            }
 
         val builder = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
-            .setContentText("Which category? Tap to choose · we'll remember")
+            .setContentText(if (unknownPayee) "The SMS doesn't say who was paid · pick for this payment"
+                else "Which category? Tap to choose · we'll remember")
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setCustomHeadsUpContentView(tiles(R.layout.notif_category_row, 4))
             .setCustomBigContentView(tiles(R.layout.notif_category_grid, 6))
@@ -198,6 +206,7 @@ object CategoryPrompt {
             context, id * 8 + 7,
             Intent(context, CategoryActionReceiver::class.java)
                 .putExtra(CategoryActionReceiver.EXTRA_PAYEE, payee)
+                .putExtra(CategoryActionReceiver.EXTRA_EXPENSE_ID, expenseIdForActions)
                 .putExtra(CategoryActionReceiver.EXTRA_NOTIFICATION_ID, id),
             // Mutable: Android writes the typed text into this intent.
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE,

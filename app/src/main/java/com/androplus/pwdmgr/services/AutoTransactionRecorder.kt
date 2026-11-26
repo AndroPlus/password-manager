@@ -82,6 +82,18 @@ object AutoTransactionRecorder {
         moved
     }
 
+    /** Files one payment (whose SMS names no payee) under [categoryName]; nothing is learned. */
+    suspend fun setCategory(expenseId: String, categoryName: String): Boolean = mutex.withLock {
+        val realmService = RealmService.getInstance()
+        val e = realmService.getAllExpenses().firstOrNull { it._id.toHexString() == expenseId } ?: return@withLock false
+        val cat = realmService.getAllCategories().find { it.name == categoryName } ?: return@withLock false
+        realmService.updateExpense(copyOf(e).apply {
+            categoryId = cat._id.toHexString()
+            this.categoryName = cat.name
+            categoryColor = cat.color
+        })
+    }
+
     private fun copyOf(e: ExpenseTransaction) = ExpenseTransaction().apply {
         _id = e._id
         amount = e.amount
@@ -115,7 +127,8 @@ object AutoTransactionRecorder {
         val saved = mutex.withLock { save(parsed, source, rawText, at) } ?: return@launch
         val ctx = appContext ?: return@launch
         val key = CategoryMemory.key(parsed.merchant, true)
-        if (ask && parsed.isExpense && key != null && !isLearned(key) &&
+        // New payee: ask once. Payee not in the SMS ("At NA"): ask for this payment only.
+        if (ask && parsed.isExpense && (key == null || !isLearned(key)) &&
             saved.categoryName !in ExpenseGrouping.NOT_COUNTED
         ) {
             val realmService = RealmService.getInstance()
@@ -179,8 +192,10 @@ object AutoTransactionRecorder {
             val r = AutoReclassifier.reclassify(source, e.description, names) ?: continue
             val chosen = memory?.categoryFor(r.merchant, r.isExpense)?.takeIf { it in names } ?: r.category
             val cat = categories.find { it.name == chosen } ?: continue
-            // A receipt re-read without its sender header can't name the merchant: keep the old name.
-            val merchant = if (r.merchant == "Merchant payment") ExpenseGrouping.capturedName(e.shortDescription) else r.merchant
+            // Keep the current name when the message itself names nobody: a receipt re-read
+            // without its sender, or "At NA" (the user may have named that payment).
+            val merchant = if (r.merchant == "Merchant payment" || CategoryMemory.key(r.merchant, true) == null)
+                ExpenseGrouping.capturedName(e.shortDescription) else r.merchant
             val newShort = DuplicateDetector.tag(if (source == "Auto") "SMS" else source, merchant)
             val newType = if (r.isExpense) "EXPENSE" else "INCOME"
             if (newShort == e.shortDescription && cat.name == e.categoryName && newType == e.type) continue

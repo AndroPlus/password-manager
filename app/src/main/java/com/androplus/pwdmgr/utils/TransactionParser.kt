@@ -214,10 +214,11 @@ object TransactionParser {
             ?.let { return trimMerchant(it.groupValues[1]) }
         // Lookahead so candidates may overlap: in "for Rs 750 at ZOMATO" the rejected
         // "Rs 750 ..." candidate must not swallow the later "at ZOMATO".
-        Regex("""(?=\b(?:at|to|from|towards|for)\s+([A-Z0-9][A-Za-z0-9 &._/-]{1,40}))""")
+        // "at" in any case: HDFC card alerts write "At SRI GANESH STORES".
+        Regex("""(?=\b(?:[Aa][Tt]|[Tt]o|[Ff]rom|[Tt]owards|[Ff]or)\s+([A-Z0-9][A-Za-z0-9 &._/-]{1,40}))""")
             .findAll(text)
             .map { trimMerchant(it.groupValues[1]) }
-            .firstOrNull { it.isNotBlank() && !notAMerchant.containsMatchIn(it) }
+            .firstOrNull { it.isNotBlank() && !notAMerchant.containsMatchIn(it) && !isPlaceholder(it) }
             ?.let { return it }
         return when (channel) {
             "UPI" -> "UPI payment"
@@ -226,6 +227,13 @@ object TransactionParser {
             else -> "Bank transaction"
         }
     }
+
+    /** Banks write these when they don't know the payee ("At NA"). */
+    private val placeholders = setOf("na", "n a", "n/a", "n.a", "nil", "null", "none", "unknown",
+        "not available", "not applicable", "-", "--", "x", "xx")
+
+    private fun isPlaceholder(name: String): Boolean =
+        name.lowercase().trim().trimEnd('.').replace(Regex("""\s+"""), " ") in placeholders
 
     private fun trimMerchant(name: String): String {
         val cut = name.split(

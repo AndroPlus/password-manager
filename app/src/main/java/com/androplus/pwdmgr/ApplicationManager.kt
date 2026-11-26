@@ -80,7 +80,7 @@ class ApplicationManager : Application() {
 
     companion object {
         /** Bump when categorization rules change enough to re-check saved entries. */
-        private const val RULES_VERSION = 3   // 3: digits-only UPI ids kept as payees
+        private const val RULES_VERSION = 4   // 4: HDFC "At NAME" names; "At NA" = no payee
         private const val RULES_VERSION_KEY = "auto_rules_version"
     }
 }
