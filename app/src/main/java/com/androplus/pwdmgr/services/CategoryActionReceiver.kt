@@ -18,6 +18,7 @@ class CategoryActionReceiver : BroadcastReceiver() {
         const val EXTRA_CATEGORY = "category"
         const val EXTRA_NOTIFICATION_ID = "notification_id"
         const val EXTRA_TEST = "test"
+        const val EXTRA_EXPENSE_ID = "expense_id"
         /** Text typed into the notification's "+ New category" box. */
         const val KEY_NEW_CATEGORY = "new_category"
     }
@@ -43,10 +44,18 @@ class CategoryActionReceiver : BroadcastReceiver() {
                 // A typed name creates the category (or reuses one with that name).
                 val category = if (!typed.isNullOrBlank()) Categories.ensure(app, typed) else picked
                 if (category == null) return@launch
-                // Learns the payee and moves this and any earlier entries from it.
-                AutoTransactionRecorder.learn(payee, true, category)
+                val expenseId = intent.getStringExtra(EXTRA_EXPENSE_ID)
+                val message = if (com.androplus.pwdmgr.utils.CategoryMemory.key(payee, true) == null) {
+                    // The SMS named no payee: file just this payment.
+                    if (expenseId != null) AutoTransactionRecorder.setCategory(expenseId, category)
+                    "Saved this payment under $category."
+                } else {
+                    // Learns the payee and moves this and any earlier entries from it.
+                    AutoTransactionRecorder.learn(payee, true, category)
+                    "Saved. Future payments here go to $category."
+                }
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(app, "Saved. Future payments here go to $category.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(app, message, Toast.LENGTH_SHORT).show()
                 }
             } finally {
                 pending.finish()

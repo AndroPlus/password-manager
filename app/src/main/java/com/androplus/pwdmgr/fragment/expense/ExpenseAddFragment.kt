@@ -17,6 +17,8 @@ import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.services.AutoTransactionRecorder
 import com.androplus.pwdmgr.services.Nicknames
 import com.androplus.pwdmgr.utils.DuplicateDetector
+import com.androplus.pwdmgr.utils.CategoryMemory
+import com.androplus.pwdmgr.utils.AutoReclassifier
 import com.androplus.pwdmgr.utils.ExpenseGrouping
 import kotlinx.coroutines.launch
 import org.mongodb.kbson.ObjectId
@@ -68,6 +70,8 @@ class ExpenseAddFragment : Fragment() {
     private var selectedCategoryIndex = 0
     // "SMS", "GPay"…: kept on save so an edited auto entry stays recognisable.
     private var sourceTag: String? = null
+    // Captured payment whose SMS names no payee ("At NA").
+    private var unknownPayee = false
 
     /** Every category as a tappable chip with its icon. */
     private fun loadCategories() {
@@ -176,7 +180,21 @@ class ExpenseAddFragment : Fragment() {
                     if (expense.amount % 1.0 == 0.0) expense.amount.toLong().toString() else expense.amount.toString())
                 binding.descriptionEditText.setText(expense.description)
                 sourceTag = DuplicateDetector.sourceOf(expense.shortDescription)
-                if (sourceTag != null) {
+                // Re-read the original message: does it name a payee at all ("At NA" doesn't)?
+                unknownPayee = sourceTag != null && AutoReclassifier.reclassify(sourceTag!!, expense.description, emptyList())
+                    ?.merchant?.let { CategoryMemory.key(it, true) == null } == true
+                if (unknownPayee) {
+                    // No payee in the SMS: nothing to group by, so the name belongs to this payment.
+                    binding.capturedPayeeLayout.visibility = View.VISIBLE
+                    binding.capturedPayeeText.setText("Not in the SMS")
+                    binding.capturedPayeeLayout.helperText = "The bank didn't say who was paid."
+                    binding.nameLayout.hint = "Name this payment (optional), e.g. Tea stall"
+                    binding.nameLayout.helperText = "Only this payment; the next one asks again"
+                    val current = ExpenseGrouping.capturedName(expense.shortDescription)
+                    binding.shortDescriptionEditText.setText(
+                        if (CategoryMemory.key(current, true) == null) "" else current)
+                    binding.descriptionLayout.hint = "Original message"
+                } else if (sourceTag != null) {
                     // Captured entry: the bank's payee name is fixed; your own name is optional.
                     binding.capturedPayeeLayout.visibility = View.VISIBLE
                     binding.capturedPayeeText.setText(ExpenseGrouping.capturedName(expense.shortDescription))
@@ -241,8 +259,14 @@ class ExpenseAddFragment : Fragment() {
         val description = binding.descriptionEditText.text.toString()
         val typedName = binding.shortDescriptionEditText.text.toString().trim()
         // Captured entries keep the payee from the message; the typed text is only a nickname.
-        val shortDescription = if (sourceTag != null) originalShortDescription else typedName
-        if (sourceTag != null) Nicknames.set(originalShortDescription, typedName)
+        // With no payee in the message, the typed name is this payment's own name.
+        val shortDescription = when {
+            sourceTag != null && unknownPayee ->
+                DuplicateDetector.tag(sourceTag!!, typedName.ifBlank { ExpenseGrouping.capturedName(originalShortDescription) })
+            sourceTag != null -> originalShortDescription
+            else -> typedName
+        }
+        if (sourceTag != null && !unknownPayee) Nicknames.set(originalShortDescription, typedName)
         val type = if (binding.radioIncome.isChecked) "INCOME" else "EXPENSE"
 
         val expenseToSave = ExpenseTransaction().apply {
@@ -281,6 +305,8 @@ class ExpenseAddFragment : Fragment() {
      * SMS / notifications from the same payee, and for earlier ones too.
      */
     private fun rememberCategory(shortDescription: String, categoryName: String, isExpense: Boolean) {
+        // No payee in the SMS: the category is saved on this payment only; nothing to learn.
+        if (unknownPayee) return
         val isAuto = DuplicateDetector.sourceOf(originalShortDescription) != null
         // Auto entries: learn only when the category was actually changed.
         if (isAuto && categoryName == originalCategoryName) return
