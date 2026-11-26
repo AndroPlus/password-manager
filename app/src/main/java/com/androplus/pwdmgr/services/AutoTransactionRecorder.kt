@@ -41,6 +41,11 @@ object AutoTransactionRecorder {
         }
     }
 
+    /** Re-reads learned categories from disk (after a restore). */
+    fun reload(context: Context) {
+        memory = CategoryMemory(File(context.applicationContext.filesDir, "learned_categories.json"))
+    }
+
     fun learnedCount(): Int = memory?.size() ?: 0
 
     fun isLearned(key: String): Boolean = memory?.hasKey(key) ?: false

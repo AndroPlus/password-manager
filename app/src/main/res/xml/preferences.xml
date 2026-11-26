@@ -62,6 +62,35 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:key="category_backup"
+        android:title="Backup">
+
+        <Preference
+            android:key="backup_location"
+            android:title="Backup location" />
+
+        <Preference
+            android:key="backup_now"
+            android:title="Back up now" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="backup_auto"
+            android:summary="Once a day, when the battery isn't low"
+            android:title="Automatic daily backup" />
+
+        <Preference
+            android:key="backup_restore"
+            android:summary="Add transactions, categories and reminders from a backup file"
+            android:title="Restore from backup" />
+
+        <Preference
+            android:key="backup_change"
+            android:summary="Use a different file or folder, or a new password"
+            android:title="Change backup location or password" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:key="category_server_sync"
         android:title="Server sync (FinIntel)">
         <SwitchPreferenceCompat

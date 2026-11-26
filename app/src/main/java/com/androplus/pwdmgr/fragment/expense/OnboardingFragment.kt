@@ -39,6 +39,16 @@ class OnboardingFragment : Fragment() {
         }
     }
 
+    private val openBackup = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@registerForActivityResult
+        com.androplus.pwdmgr.fragment.BackupUi.restoreFrom(this, uri) { ok ->
+            if (ok && _binding != null) {
+                binding.onbRestore.visibility = View.GONE
+                binding.onbStatus.text = "Backup restored. Allow SMS access to keep tracking new payments."
+            }
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentOnboardingBinding.inflate(inflater, container, false)
         return binding.root
@@ -48,6 +58,7 @@ class OnboardingFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         binding.onbPrimary.setOnClickListener { primary() }
         binding.onbSkip.setOnClickListener { next() }
+        binding.onbRestore.setOnClickListener { openBackup.launch(arrayOf("*/*")) }
         // The keyboard's ✓ saves the budget, so nobody has to dismiss it to reach the button.
         binding.onbBudget.setOnEditorActionListener { _, actionId, event ->
             val done = actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
@@ -68,6 +79,8 @@ class OnboardingFragment : Fragment() {
         binding.onbStatus.text = ""
         binding.onbBudgetLayout.visibility = View.GONE
         binding.onbSkip.visibility = View.VISIBLE
+        binding.onbRestore.visibility = if (step == 0 && com.androplus.pwdmgr.services.CloudBackup.lastBackup(requireContext()) == 0L)
+            View.VISIBLE else View.GONE
         when (step) {
             0 -> {
                 binding.onbIcon.setImageResource(R.drawable.ic_cat_card)

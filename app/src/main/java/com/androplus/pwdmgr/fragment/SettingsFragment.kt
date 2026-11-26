@@ -72,8 +72,42 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
+    // Backups: pick a new file (Google Drive or any folder) or an existing one to restore.
+    private var pendingPassword: String? = null
+    private val createBackupFile = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        val password = pendingPassword
+        pendingPassword = null
+        if (uri == null || password == null) return@registerForActivityResult
+        com.androplus.pwdmgr.services.CloudBackup.setLocation(requireContext(), uri, password)
+        BackupUi.backupNow(this) { updateBackupSummary() }
+    }
+    private val openBackupFile = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) BackupUi.restoreFrom(this, uri) { updateBackupSummary() } }
+
+    private fun chooseBackupLocation() {
+        BackupUi.askNewPassword(this) { password ->
+            pendingPassword = password
+            Toast.makeText(context, "Pick Google Drive (☰ menu) or a folder", Toast.LENGTH_LONG).show()
+            createBackupFile.launch(com.androplus.pwdmgr.services.CloudBackup.DEFAULT_FILE_NAME)
+        }
+    }
+
+    private fun updateBackupSummary() {
+        if (!isAdded) return
+        val ctx = requireContext()
+        val set = com.androplus.pwdmgr.services.CloudBackup.location(ctx) != null
+        findPreference<Preference>("backup_location")?.summary = BackupUi.status(ctx)
+        findPreference<Preference>("backup_now")?.isEnabled = set
+        findPreference<Preference>("backup_auto")?.isEnabled = set
+        findPreference<Preference>("backup_change")?.isVisible = set
+    }
+
     override fun onResume() {
         super.onResume()
+        updateBackupSummary()
         updateSyncSummary()
         updateNotificationStatus()
         updatePromptStatus()
@@ -301,6 +335,27 @@ class SettingsFragment : PreferenceFragmentCompat() {
                         .putExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT, true)
                         .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 )
+                return true
+            }
+            "backup_location" -> {
+                if (com.androplus.pwdmgr.services.CloudBackup.location(requireContext()) == null) chooseBackupLocation()
+                else BackupUi.backupNow(this) { updateBackupSummary() }
+                return true
+            }
+            "backup_now" -> {
+                BackupUi.backupNow(this) { updateBackupSummary() }
+                return true
+            }
+            "backup_auto" -> {
+                com.androplus.pwdmgr.services.CloudBackup.schedule(requireContext())
+                return true
+            }
+            "backup_restore" -> {
+                openBackupFile.launch(arrayOf("*/*"))
+                return true
+            }
+            "backup_change" -> {
+                chooseBackupLocation()
                 return true
             }
             "test_category_prompt" -> {

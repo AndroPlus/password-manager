@@ -16,6 +16,12 @@ object Nicknames {
         ExpenseGrouping.nicknameOf = { n.get(it) }
     }
 
+    /** Re-reads names from disk (after a restore). */
+    fun reload(context: Context) {
+        names = null
+        init(context)
+    }
+
     fun get(payee: String): String? = names?.get(payee)
 
     fun set(payee: String, name: String?): Boolean = names?.set(payee, name) ?: false

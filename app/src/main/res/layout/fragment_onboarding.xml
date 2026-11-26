@@ -109,4 +109,14 @@
         android:text="Skip for now"
         android:textAllCaps="false"
         android:textColor="@color/ink_muted" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/onbRestore"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:text="Reinstalling? Restore from a backup"
+        android:textAllCaps="false"
+        android:textColor="@color/accent"
+        android:visibility="gone" />
 </LinearLayout>
