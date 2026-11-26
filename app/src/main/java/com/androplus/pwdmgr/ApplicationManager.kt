@@ -48,6 +48,7 @@ class ApplicationManager : Application() {
         com.androplus.pwdmgr.services.AutoTransactionRecorder.init(this)
         com.androplus.pwdmgr.services.Nicknames.init(this)
         com.androplus.pwdmgr.services.Bills.schedule(this)
+        com.androplus.pwdmgr.services.CloudBackup.schedule(this)
 
         // Initialize default expense categories
         CoroutineScope(Dispatchers.IO).launch {
