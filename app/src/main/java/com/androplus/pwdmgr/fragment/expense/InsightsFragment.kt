@@ -13,7 +13,10 @@ import androidx.fragment.app.Fragment
 import com.androplus.pwdmgr.R
 import com.androplus.pwdmgr.databinding.FragmentInsightsBinding
 import com.androplus.pwdmgr.services.RealmService
+import com.androplus.pwdmgr.utils.ChartPeriod
 import com.androplus.pwdmgr.utils.DuplicateDetector
+import com.androplus.pwdmgr.utils.PeriodCharts
+import com.androplus.pwdmgr.utils.PeriodReport
 import com.androplus.pwdmgr.utils.ExpenseGrouping
 import com.androplus.pwdmgr.utils.ExpenseRow
 import com.androplus.pwdmgr.utils.Insights
@@ -32,9 +35,116 @@ class InsightsFragment : Fragment() {
         return binding.root
     }
 
+    // Week / Month / Year chart state, kept while the screen is open.
+    private var period = ChartPeriod.MONTH
+    private var offset = 0                      // 0 = current period, -1 = the one before…
+    private var selectedBucket = -1             // tapped bar; -1 = default (current day / month, else the highest)
+    private var rows: List<ExpenseRow> = emptyList()
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         ExpenseTabs.setup(this, binding.bottomNav, R.id.tab_insights)
+
+        binding.periodToggle.check(R.id.periodMonth)
+        binding.periodToggle.addOnButtonCheckedListener { _, id, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            period = when (id) { R.id.periodWeek -> ChartPeriod.WEEK; R.id.periodYear -> ChartPeriod.YEAR; else -> ChartPeriod.MONTH }
+            offset = 0
+            selectedBucket = -1
+            drawPeriod()
+        }
+        binding.periodPrev.setOnClickListener { offset--; selectedBucket = -1; drawPeriod() }
+        binding.periodNext.setOnClickListener { if (offset < 0) { offset++; selectedBucket = -1; drawPeriod() } }
+    }
+
+    /** The chart for [period] / [offset]: one bar per day (week, month) or per month (year). */
+    private fun drawPeriod() {
+        if (_binding == null) return
+        val now = System.currentTimeMillis()
+        val report = PeriodCharts.report(rows, period, offset, now)
+        val dp = resources.displayMetrics.density
+        val chartHeight = (150 * dp).toInt()
+
+        binding.periodTitle.text = report.title
+        binding.periodRange.text = if (report.title == report.range) "" else report.range
+        binding.periodNext.isEnabled = offset < 0
+        binding.periodNext.alpha = if (offset < 0) 1f else 0.3f
+        binding.periodSpent.text = money.format(report.spent)
+        binding.periodCompare.text = "${report.previousLabel}: ${money.format(report.previousSpent)}" + when {
+            report.previousSpent <= 0 -> ""
+            report.spent > report.previousSpent -> "  ·  ▲ ${((report.spent / report.previousSpent - 1) * 100).toInt()}%"
+            report.spent < report.previousSpent -> "  ·  ▼ ${((1 - report.spent / report.previousSpent) * 100).toInt()}%"
+            else -> ""
+        }
+        val extras = mutableListOf<String>()
+        if (report.earned > 0) extras += "Income ${money.format(report.earned)}"
+        if (report.saved > 0) extras += "Saved ${money.format(report.saved)}"
+        binding.periodExtras.text = extras.joinToString("  ·  ")
+        binding.periodExtras.visibility = if (extras.isEmpty()) View.GONE else View.VISIBLE
+
+        val max = report.buckets.maxOf { it.spent }
+        binding.periodMax.text = if (max > 0) "Highest bar ${money.format(max)}" else ""
+
+        // Which bar is selected: the tapped one, else the current day / month, else the highest.
+        val current = report.buckets.indexOfFirst { now in it.startMillis..it.endMillis }
+        val chosen = when {
+            selectedBucket in report.buckets.indices -> selectedBucket
+            current >= 0 -> current
+            max > 0 -> report.buckets.indexOfFirst { it.spent == max }
+            else -> -1
+        }
+        showDetail(report, chosen)
+
+        binding.periodBars.removeAllViews()
+        binding.periodLabels.removeAllViews()
+        val gap = ((if (report.buckets.size > 12) 2 else 6) * dp).toInt()
+        report.buckets.forEachIndexed { i, b ->
+            val column = android.widget.FrameLayout(requireContext()).apply {
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f)
+                    .apply { if (i > 0) marginStart = gap }
+                contentDescription = "${b.fullLabel}: ${money.format(b.spent)}"
+                isClickable = true
+                setOnClickListener { selectedBucket = i; drawPeriod() }
+            }
+            val h = if (max > 0) ((b.spent / max) * chartHeight).toInt().coerceAtLeast(if (b.spent > 0) (3 * dp).toInt() else 0) else 0
+            column.addView(View(requireContext()).apply {
+                importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+                setBackgroundColor(requireContext().getColor(if (i == chosen) R.color.accent else R.color.ink))
+                alpha = if (i == chosen) 1f else 0.85f
+                layoutParams = android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, h, Gravity.BOTTOM)
+            })
+            binding.periodBars.addView(column)
+            // Each label sits in a column as wide as its bar, but the text itself is as wide as it
+            // needs to be and may spill a little over its neighbours (two-digit days on thin bars).
+            val slot = android.widget.FrameLayout(requireContext()).apply {
+                clipChildren = false
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                    .apply { if (i > 0) marginStart = gap }
+            }
+            slot.addView(TextView(requireContext()).apply {
+                text = b.label
+                textSize = if (report.buckets.size > 12) 10f else 11f
+                maxLines = 1
+                gravity = Gravity.CENTER
+                setTextColor(requireContext().getColor(if (i == chosen) R.color.accent else R.color.ink_muted))
+                // A fixed width wider than a thin bar, centred over it: the text is never narrowed to the bar.
+                layoutParams = android.widget.FrameLayout.LayoutParams(
+                    (44 * dp).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL)
+            })
+            binding.periodLabels.addView(slot)
+        }
+    }
+
+    private fun showDetail(report: PeriodReport, index: Int) {
+        val b = report.buckets.getOrNull(index)
+        binding.periodDetail.text = when {
+            b == null -> "No spending in this ${report.period.name.lowercase()} yet."
+            b.spent <= 0 -> "${b.fullLabel}: nothing spent"
+            else -> "${b.fullLabel}: ${money.format(b.spent)}" + if (report.spent > 0) {
+                val pct = b.spent / report.spent * 100
+                "  ·  ${if (pct < 1) "<1" else pct.toInt().toString()}% of the ${report.period.name.lowercase()}"
+            } else ""
+        }
     }
 
     override fun onResume() {
@@ -46,7 +156,7 @@ class InsightsFragment : Fragment() {
 
     private fun load() {
         val now = System.currentTimeMillis()
-        val rows = RealmService.getInstance().getAllExpenses().map {
+        rows = RealmService.getInstance().getAllExpenses().map {
             ExpenseRow(
                 id = it._id.toHexString(),
                 title = ExpenseGrouping.displayTitle(it.shortDescription, it.categoryName),
@@ -58,6 +168,7 @@ class InsightsFragment : Fragment() {
                 categoryColor = it.categoryColor,
             )
         }
+        drawPeriod()
         drawBars(Insights.monthly(rows, now))
 
         // Repeats every month
