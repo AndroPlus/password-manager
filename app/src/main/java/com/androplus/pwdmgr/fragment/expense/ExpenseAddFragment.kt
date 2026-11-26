@@ -15,7 +15,10 @@ import com.androplus.pwdmgr.model.ExpenseCategory
 import com.androplus.pwdmgr.model.ExpenseTransaction
 import com.androplus.pwdmgr.services.RealmService
 import com.androplus.pwdmgr.services.AutoTransactionRecorder
+import com.androplus.pwdmgr.services.Nicknames
 import com.androplus.pwdmgr.utils.DuplicateDetector
+import com.androplus.pwdmgr.utils.CategoryMemory
+import com.androplus.pwdmgr.utils.AutoReclassifier
 import com.androplus.pwdmgr.utils.ExpenseGrouping
 import kotlinx.coroutines.launch
 import org.mongodb.kbson.ObjectId
@@ -67,6 +70,8 @@ class ExpenseAddFragment : Fragment() {
     private var selectedCategoryIndex = 0
     // "SMS", "GPay"…: kept on save so an edited auto entry stays recognisable.
     private var sourceTag: String? = null
+    // Captured payment whose SMS names no payee ("At NA").
+    private var unknownPayee = false
 
     /** Every category as a tappable chip with its icon. */
     private fun loadCategories() {
@@ -97,7 +102,48 @@ class ExpenseAddFragment : Fragment() {
             }
             group.addView(chip)
         }
+        group.addView(com.google.android.material.chip.Chip(requireContext()).apply {
+            id = View.generateViewId()
+            text = "New category"
+            isCheckable = false
+            chipIcon = androidx.core.content.ContextCompat.getDrawable(requireContext(), R.drawable.ic_plus)
+            chipIconTint = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.accent))
+            isChipIconVisible = true
+            chipBackgroundColor = android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+            chipStrokeWidth = resources.displayMetrics.density
+            chipStrokeColor = android.content.res.ColorStateList.valueOf(requireContext().getColor(R.color.accent))
+            setTextColor(requireContext().getColor(R.color.accent))
+            setOnClickListener { addCategory() }
+        })
         selectCategory(categories.indexOfFirst { it.name == "Other" }.takeIf { it >= 0 } ?: 0)
+    }
+
+    /** Type a name; the category is created and picked for this transaction. */
+    private fun addCategory() {
+        val ctx = requireContext()
+        val input = android.widget.EditText(ctx).apply {
+            hint = "e.g. Tea & Snacks"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.FrameLayout(ctx).apply { setPadding(pad, pad / 2, pad, 0); addView(input) }
+        android.app.AlertDialog.Builder(ctx)
+            .setTitle("New category")
+            .setView(box)
+            .setPositiveButton("Add") { _, _ ->
+                val typed = input.text.toString()
+                lifecycleScope.launch {
+                    val name = com.androplus.pwdmgr.services.Categories.ensure(ctx.applicationContext, typed)
+                        ?: return@launch
+                    if (_binding == null) return@launch
+                    val keepIndex = selectedCategoryIndex
+                    loadCategories()
+                    val i = categories.indexOfFirst { it.name == name }
+                    selectCategory(if (i >= 0) i else keepIndex)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun selectCategory(index: Int) {
@@ -134,9 +180,31 @@ class ExpenseAddFragment : Fragment() {
                     if (expense.amount % 1.0 == 0.0) expense.amount.toLong().toString() else expense.amount.toString())
                 binding.descriptionEditText.setText(expense.description)
                 sourceTag = DuplicateDetector.sourceOf(expense.shortDescription)
-                binding.shortDescriptionEditText.setText(
-                    expense.shortDescription.replace(Regex("""^\[[A-Za-z]+]\s*"""), ""))
-                if (sourceTag != null) binding.descriptionLayout.hint = "Original message"
+                // Re-read the original message: does it name a payee at all ("At NA" doesn't)?
+                unknownPayee = sourceTag != null && AutoReclassifier.reclassify(sourceTag!!, expense.description, emptyList())
+                    ?.merchant?.let { CategoryMemory.key(it, true) == null } == true
+                if (unknownPayee) {
+                    // No payee in the SMS: nothing to group by, so the name belongs to this payment.
+                    binding.capturedPayeeLayout.visibility = View.VISIBLE
+                    binding.capturedPayeeText.setText("Not in the SMS")
+                    binding.capturedPayeeLayout.helperText = "The bank didn't say who was paid."
+                    binding.nameLayout.hint = "Name this payment (optional), e.g. Tea stall"
+                    binding.nameLayout.helperText = "Only this payment; the next one asks again"
+                    val current = ExpenseGrouping.capturedName(expense.shortDescription)
+                    binding.shortDescriptionEditText.setText(
+                        if (CategoryMemory.key(current, true) == null) "" else current)
+                    binding.descriptionLayout.hint = "Original message"
+                } else if (sourceTag != null) {
+                    // Captured entry: the bank's payee name is fixed; your own name is optional.
+                    binding.capturedPayeeLayout.visibility = View.VISIBLE
+                    binding.capturedPayeeText.setText(ExpenseGrouping.capturedName(expense.shortDescription))
+                    binding.nameLayout.hint = "Your name for it (optional), e.g. KFC"
+                    binding.nameLayout.helperText = "Shown instead, for every payment to this payee"
+                    binding.shortDescriptionEditText.setText(Nicknames.get(expense.shortDescription) ?: "")
+                    binding.descriptionLayout.hint = "Original message"
+                } else {
+                    binding.shortDescriptionEditText.setText(expense.shortDescription)
+                }
                 selectedCalendar.timeInMillis = expense.date
                 binding.dateButton.text = dateFormat.format(selectedCalendar.time)
                 
@@ -190,7 +258,15 @@ class ExpenseAddFragment : Fragment() {
         }
         val description = binding.descriptionEditText.text.toString()
         val typedName = binding.shortDescriptionEditText.text.toString().trim()
-        val shortDescription = sourceTag?.let { DuplicateDetector.tag(it, typedName) } ?: typedName
+        // Captured entries keep the payee from the message; the typed text is only a nickname.
+        // With no payee in the message, the typed name is this payment's own name.
+        val shortDescription = when {
+            sourceTag != null && unknownPayee ->
+                DuplicateDetector.tag(sourceTag!!, typedName.ifBlank { ExpenseGrouping.capturedName(originalShortDescription) })
+            sourceTag != null -> originalShortDescription
+            else -> typedName
+        }
+        if (sourceTag != null && !unknownPayee) Nicknames.set(originalShortDescription, typedName)
         val type = if (binding.radioIncome.isChecked) "INCOME" else "EXPENSE"
 
         val expenseToSave = ExpenseTransaction().apply {
@@ -229,6 +305,8 @@ class ExpenseAddFragment : Fragment() {
      * SMS / notifications from the same payee, and for earlier ones too.
      */
     private fun rememberCategory(shortDescription: String, categoryName: String, isExpense: Boolean) {
+        // No payee in the SMS: the category is saved on this payment only; nothing to learn.
+        if (unknownPayee) return
         val isAuto = DuplicateDetector.sourceOf(originalShortDescription) != null
         // Auto entries: learn only when the category was actually changed.
         if (isAuto && categoryName == originalCategoryName) return
@@ -242,10 +320,6 @@ class ExpenseAddFragment : Fragment() {
         AutoTransactionRecorder.init(appContext)
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             val moved = AutoTransactionRecorder.learn(payee, isExpense, categoryName)
-            // A renamed payee should also match under its new name.
-            if (isAuto && shortDescription.isNotBlank() && shortDescription != originalShortDescription) {
-                AutoTransactionRecorder.learn(shortDescription, isExpense, categoryName)
-            }
             if (moved == null) return@launch   // too generic to learn, e.g. "UPI payment"
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
                 val extra = if (moved > 0) " Moved $moved earlier one(s) too." else ""

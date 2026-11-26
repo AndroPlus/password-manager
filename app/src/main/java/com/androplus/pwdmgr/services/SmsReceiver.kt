@@ -7,6 +7,7 @@ import android.provider.Telephony
 import android.util.Log
 import androidx.preference.PreferenceManager
 import com.androplus.pwdmgr.utils.BankSender
+import com.androplus.pwdmgr.utils.RECEIPT_SOURCE
 import com.androplus.pwdmgr.utils.TransactionParser
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,8 +41,10 @@ class SmsReceiver : BroadcastReceiver() {
             // can be newer. ServerSync applies the privacy filter (no OTPs).
             ServerSync.submit(context, "sms", "SMS", "", text,
                 sentAtBySender[sender] ?: System.currentTimeMillis())
-            val parsed = TransactionParser.parseSms(text) ?: return@mapNotNull null
-            AutoTransactionRecorder.record(parsed, "SMS", text)
+            TransactionParser.parseSms(text)?.let { return@mapNotNull AutoTransactionRecorder.record(it, "SMS", text) }
+            // Not a bank message: maybe a merchant's own "payment successful" SMS.
+            val receipt = TransactionParser.parseMerchantReceipt(text, sender) ?: return@mapNotNull null
+            AutoTransactionRecorder.record(receipt, RECEIPT_SOURCE, text)
         }
         if (jobs.isEmpty()) return
 

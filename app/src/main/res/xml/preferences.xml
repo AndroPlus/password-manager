@@ -29,8 +29,13 @@
             android:summary="When you pay a new shop or person, a notification asks its category once"
             android:title="Ask category for new payees" />
 
+        <Preference
+            android:dependency="ask_category_for_new_payees"
+            android:key="test_category_prompt"
+            android:title="Check new-payee notifications" />
+
         <EditTextPreference
-            android:defaultValue="200"
+            android:defaultValue="0"
             android:dependency="ask_category_for_new_payees"
             android:dialogMessage="Smaller payments to new payees wait in the Home banner instead of notifying you."
             android:key="prompt_min_amount"
@@ -56,7 +61,38 @@
             android:title="Import past SMS" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="Server sync (FinIntel)">
+    <PreferenceCategory
+        android:key="category_backup"
+        android:title="Backup">
+
+        <Preference
+            android:key="backup_location"
+            android:title="Backup location" />
+
+        <Preference
+            android:key="backup_now"
+            android:title="Back up now" />
+
+        <SwitchPreferenceCompat
+            android:defaultValue="true"
+            android:key="backup_auto"
+            android:summary="Once a day, when the battery isn't low"
+            android:title="Automatic daily backup" />
+
+        <Preference
+            android:key="backup_restore"
+            android:summary="Add transactions, categories and reminders from a backup file"
+            android:title="Restore from backup" />
+
+        <Preference
+            android:key="backup_change"
+            android:summary="Use a different file or folder, or a new password"
+            android:title="Change backup location or password" />
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="category_server_sync"
+        android:title="Server sync (FinIntel)">
         <SwitchPreferenceCompat
             android:defaultValue="false"
             android:key="server_sync_enabled"
@@ -83,7 +119,9 @@
             android:title="Sync now" />
     </PreferenceCategory>
 
-    <PreferenceCategory android:title="General">
+    <PreferenceCategory
+        android:key="category_general"
+        android:title="General">
         <Preference
             android:key="download_option"
             android:title="Export Data" />

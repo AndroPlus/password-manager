@@ -66,6 +66,13 @@ class MainActivity : AppCompatActivity(), AppListFragment.AdapterInteractionList
 
     /** From the "new payee" notification: open that transaction to pick its category. */
     private fun openExpenseFrom(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(com.androplus.pwdmgr.services.Bills.EXTRA_OPEN_BILLS, false) == true) {
+            intent.removeExtra(com.androplus.pwdmgr.services.Bills.EXTRA_OPEN_BILLS)
+            binding.root.post {
+                findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.BillsFragment)
+            }
+            return
+        }
         if (intent?.getBooleanExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT, false) == true) {
             intent.removeExtra(com.androplus.pwdmgr.services.CategoryPrompt.EXTRA_OPEN_PAYEE_SORT)
             binding.root.post {

@@ -46,6 +46,9 @@ class ApplicationManager : Application() {
         }
         RealmService.getInstance(key);
         com.androplus.pwdmgr.services.AutoTransactionRecorder.init(this)
+        com.androplus.pwdmgr.services.Nicknames.init(this)
+        com.androplus.pwdmgr.services.Bills.schedule(this)
+        com.androplus.pwdmgr.services.CloudBackup.schedule(this)
 
         // Initialize default expense categories
         CoroutineScope(Dispatchers.IO).launch {
@@ -78,7 +81,7 @@ class ApplicationManager : Application() {
 
     companion object {
         /** Bump when categorization rules change enough to re-check saved entries. */
-        private const val RULES_VERSION = 2
+        private const val RULES_VERSION = 4   // 4: HDFC "At NAME" names; "At NA" = no payee
         private const val RULES_VERSION_KEY = "auto_rules_version"
     }
 }

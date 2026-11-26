@@ -41,6 +41,11 @@ object AutoTransactionRecorder {
         }
     }
 
+    /** Re-reads learned categories from disk (after a restore). */
+    fun reload(context: Context) {
+        memory = CategoryMemory(File(context.applicationContext.filesDir, "learned_categories.json"))
+    }
+
     fun learnedCount(): Int = memory?.size() ?: 0
 
     fun isLearned(key: String): Boolean = memory?.hasKey(key) ?: false
@@ -82,6 +87,18 @@ object AutoTransactionRecorder {
         moved
     }
 
+    /** Files one payment (whose SMS names no payee) under [categoryName]; nothing is learned. */
+    suspend fun setCategory(expenseId: String, categoryName: String): Boolean = mutex.withLock {
+        val realmService = RealmService.getInstance()
+        val e = realmService.getAllExpenses().firstOrNull { it._id.toHexString() == expenseId } ?: return@withLock false
+        val cat = realmService.getAllCategories().find { it.name == categoryName } ?: return@withLock false
+        realmService.updateExpense(copyOf(e).apply {
+            categoryId = cat._id.toHexString()
+            this.categoryName = cat.name
+            categoryColor = cat.color
+        })
+    }
+
     private fun copyOf(e: ExpenseTransaction) = ExpenseTransaction().apply {
         _id = e._id
         amount = e.amount
@@ -115,14 +132,15 @@ object AutoTransactionRecorder {
         val saved = mutex.withLock { save(parsed, source, rawText, at) } ?: return@launch
         val ctx = appContext ?: return@launch
         val key = CategoryMemory.key(parsed.merchant, true)
-        if (ask && parsed.isExpense && key != null && !isLearned(key) &&
+        // New payee: ask once. Payee not in the SMS ("At NA"): ask for this payment only.
+        if (ask && parsed.isExpense && (key == null || !isLearned(key)) &&
             saved.categoryName !in ExpenseGrouping.NOT_COUNTED
         ) {
             val realmService = RealmService.getInstance()
             val names = realmService.getAllCategories().map { it.name }
             val past = realmService.getAllExpenses().filter { it.type == "EXPENSE" }.map { it.categoryName }
             runCatching {
-                CategoryPrompt.ask(ctx, saved, parsed.merchant, PayeeSorting.quickChoices(saved.categoryName, past, names))
+                CategoryPrompt.ask(ctx, saved, parsed.merchant, PayeeSorting.quickChoices(saved.categoryName, past, names, max = 5))
             }.onFailure { Log.w(TAG, "Could not show category prompt", it) }
         }
     }
@@ -179,7 +197,11 @@ object AutoTransactionRecorder {
             val r = AutoReclassifier.reclassify(source, e.description, names) ?: continue
             val chosen = memory?.categoryFor(r.merchant, r.isExpense)?.takeIf { it in names } ?: r.category
             val cat = categories.find { it.name == chosen } ?: continue
-            val newShort = DuplicateDetector.tag(if (source == "Auto") "SMS" else source, r.merchant)
+            // Keep the current name when the message itself names nobody: a receipt re-read
+            // without its sender, or "At NA" (the user may have named that payment).
+            val merchant = if (r.merchant == "Merchant payment" || CategoryMemory.key(r.merchant, true) == null)
+                ExpenseGrouping.capturedName(e.shortDescription) else r.merchant
+            val newShort = DuplicateDetector.tag(if (source == "Auto") "SMS" else source, merchant)
             val newType = if (r.isExpense) "EXPENSE" else "INCOME"
             if (newShort == e.shortDescription && cat.name == e.categoryName && newType == e.type) continue
             val updated = copyOf(e).apply {

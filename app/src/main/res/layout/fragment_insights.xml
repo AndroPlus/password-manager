@@ -25,7 +25,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Last 6 months"
+            android:text="Spending over time"
             android:textColor="@color/ink_muted"
             android:textSize="13sp" />
     </LinearLayout>
@@ -42,10 +42,168 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="16dp">
 
+            <!-- Spending by week / month / year -->
+            <LinearLayout
+                android:clipChildren="false"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/periodToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:selectionRequired="true"
+                    app:singleSelection="true">
+
+                    <Button
+                        android:id="@+id/periodWeek"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Week"
+                        android:textAllCaps="false" />
+
+                    <Button
+                        android:id="@+id/periodMonth"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Month"
+                        android:textAllCaps="false" />
+
+                    <Button
+                        android:id="@+id/periodYear"
+                        style="?attr/materialButtonOutlinedStyle"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Year"
+                        android:textAllCaps="false" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/periodPrev"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Previous period"
+                        android:src="@drawable/ic_chevron_left" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:gravity="center_horizontal"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/periodTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:textColor="@color/ink"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/periodRange"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/ink_muted"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <ImageButton
+                        android:id="@+id/periodNext"
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Next period"
+                        android:src="@drawable/ic_chevron_right" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/periodSpent"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center_horizontal"
+                    android:textColor="@color/ink"
+                    android:textSize="30sp" />
+
+                <TextView
+                    android:id="@+id/periodCompare"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_horizontal"
+                    android:textColor="@color/ink_muted"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/periodMax"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:textColor="@color/ink_muted"
+                    android:textSize="11sp" />
+
+                <LinearLayout
+                    android:id="@+id/periodBars"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:gravity="bottom"
+                    android:orientation="horizontal" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/hairline" />
+
+                <LinearLayout
+                    android:id="@+id/periodLabels"
+                    android:clipChildren="false"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    android:id="@+id/periodDetail"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_soft"
+                    android:padding="12dp"
+                    android:textColor="@color/ink_soft"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/periodExtras"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_horizontal"
+                    android:textColor="@color/ink_muted"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
             <!-- Spent vs earned -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
                 android:padding="16dp">
@@ -61,7 +219,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
-                        android:text="Spent vs earned"
+                        android:text="Spent vs earned · 6 months"
                         android:textColor="@color/ink"
                         android:textSize="15sp" />
 
@@ -201,5 +359,6 @@
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
         app:labelVisibilityMode="labeled"
+        app:paddingBottomSystemWindowInsets="false"
         app:menu="@menu/expense_nav_menu" />
 </LinearLayout>

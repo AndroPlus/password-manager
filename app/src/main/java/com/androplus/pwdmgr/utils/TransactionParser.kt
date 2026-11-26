@@ -90,6 +90,58 @@ object TransactionParser {
         )
     }
 
+    // ---- merchant receipts ---------------------------------------------------
+    // Some merchants confirm a payment themselves, without naming an account:
+    // "Transaction of Rs. 954.00 for your LPG booking is successful ... Regards, HP PAY Team".
+
+    private val receiptAmountRegex = Regex(
+        """(?:transaction|txn|payment|purchase|order|recharge|booking)\s+(?:amount\s+)?(?:of\s+)?(?:rs\.?|inr|₹)\s*([0-9][0-9,]*(?:\.\d{1,2})?)""",
+        RegexOption.IGNORE_CASE,
+    )
+    private val receivedYourPaymentRegex = Regex(
+        """received\s+(?:your\s+)?payment\s+of\s+(?:rs\.?|inr|₹)\s*([0-9][0-9,]*(?:\.\d{1,2})?)""",
+        RegexOption.IGNORE_CASE,
+    )
+    private val receiptSuccessWords = listOf("successful", "success", "completed", "confirmed", "is done", "received your payment")
+    private val receiptRejects = listOf(
+        "refund", "cashback", "reversal", "reversed", "credited to your", "failed", "declined",
+        "unsuccessful", "not successful", "pending", "offer", "win ", "won ", "otp", "due on",
+        "reminder", "request", "will be", "expire", "get rs", "upto", "up to",
+    )
+    private val signatureRegex = Regex("""(?:regards|thanks|thank you|team)[,.:\s-]*\n?\s*([A-Za-z][A-Za-z0-9 &.'-]{1,30}?)\s*(?:team)?\s*\.?\s*$""",
+        RegexOption.IGNORE_CASE)
+    private val trailingDashNameRegex = Regex("""[-–]\s*([A-Za-z][A-Za-z0-9 &.']{1,30})\s*\.?\s*$""")
+
+    /**
+     * A merchant's own "payment successful" SMS. Used when [parseSms] finds no bank
+     * message. [sender] is the SMS header (e.g. "VM-HPPAYS"), the payee of last resort.
+     */
+    fun parseMerchantReceipt(message: String, sender: String? = null): ParsedTransaction? {
+        val text = message.trim()
+        if (text.isEmpty()) return null
+        val low = text.lowercase()
+        if (receiptRejects.any { it in low } || smsRejects.any { it in low }) return null
+        if (receiptSuccessWords.none { it in low }) return null
+        val raw = (receiptAmountRegex.find(text) ?: receivedYourPaymentRegex.find(text))
+            ?.groupValues?.get(1) ?: return null
+        val amount = raw.replace(",", "").toDoubleOrNull()?.takeIf { it > 0 } ?: return null
+        return ParsedTransaction(
+            amount = amount,
+            merchant = receiptMerchant(text, sender),
+            isExpense = true,
+            channel = "Merchant",
+            last4 = null,
+        )
+    }
+
+    private fun receiptMerchant(text: String, sender: String?): String {
+        signatureRegex.find(text)?.groupValues?.get(1)?.trim()?.takeIf { it.length >= 2 }?.let { return it }
+        trailingDashNameRegex.find(text)?.groupValues?.get(1)?.trim()?.let { return it }
+        // "VM-HPPAYS" / "AD-ZOMATO-S" → "HPPAYS" / "ZOMATO"
+        val header = sender?.substringAfter('-', sender)?.substringBefore('-')?.trim()
+        return header?.takeIf { it.any(Char::isLetter) && it.length >= 3 } ?: "Merchant payment"
+    }
+
     /** Parse a GPay / PhonePe / Paytm notification (title + text). */
     fun parseNotification(title: String, text: String): ParsedTransaction? {
         // Newline, not space: the merchant pattern must not run from title into body.
@@ -149,8 +201,9 @@ object TransactionParser {
         if (channel == "ATM") return "ATM Withdrawal"
         vpaRegex.find(text)?.groupValues?.get(1)?.let { vpa ->
             val handle = vpa.substringBefore("@")
-            // A bare phone-number handle says nothing useful about the payee.
-            return if (handle.all { it.isDigit() }) "UPI transfer" else handle
+            // A digits-only handle (a phone number or a short id) is still a distinct
+            // payee: keep the whole UPI id so it can be categorised and given a name.
+            return if (handle.all { it.isDigit() }) vpa.lowercase() else handle
         }
         (upiPathRegex.find(text) ?: upiNarrationRegex.find(text))?.let { m ->
             val name = m.groupValues[1].trim().trimEnd('.', ' ')
@@ -161,10 +214,11 @@ object TransactionParser {
             ?.let { return trimMerchant(it.groupValues[1]) }
         // Lookahead so candidates may overlap: in "for Rs 750 at ZOMATO" the rejected
         // "Rs 750 ..." candidate must not swallow the later "at ZOMATO".
-        Regex("""(?=\b(?:at|to|from|towards|for)\s+([A-Z0-9][A-Za-z0-9 &._/-]{1,40}))""")
+        // "at" in any case: HDFC card alerts write "At SRI GANESH STORES".
+        Regex("""(?=\b(?:[Aa][Tt]|[Tt]o|[Ff]rom|[Tt]owards|[Ff]or)\s+([A-Z0-9][A-Za-z0-9 &._/-]{1,40}))""")
             .findAll(text)
             .map { trimMerchant(it.groupValues[1]) }
-            .firstOrNull { it.isNotBlank() && !notAMerchant.containsMatchIn(it) }
+            .firstOrNull { it.isNotBlank() && !notAMerchant.containsMatchIn(it) && !isPlaceholder(it) }
             ?.let { return it }
         return when (channel) {
             "UPI" -> "UPI payment"
@@ -173,6 +227,13 @@ object TransactionParser {
             else -> "Bank transaction"
         }
     }
+
+    /** Banks write these when they don't know the payee ("At NA"). */
+    private val placeholders = setOf("na", "n a", "n/a", "n.a", "nil", "null", "none", "unknown",
+        "not available", "not applicable", "-", "--", "x", "xx")
+
+    private fun isPlaceholder(name: String): Boolean =
+        name.lowercase().trim().trimEnd('.').replace(Regex("""\s+"""), " ") in placeholders
 
     private fun trimMerchant(name: String): String {
         val cut = name.split(

@@ -73,7 +73,35 @@
                         android:textSize="24sp" />
                 </com.google.android.material.textfield.TextInputLayout>
 
+                <!-- Auto-captured entries: the payee as the bank message names it. Fixed,
+                     because categories are learned by it. -->
                 <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/capturedPayeeLayout"
+                    style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:hint="Paid to (from the message)"
+                    android:visibility="gone"
+                    app:boxBackgroundColor="@color/surface"
+                    app:helperText="Fixed. Payments to this payee are grouped by it."
+                    app:helperTextTextColor="@color/ink_muted"
+                    app:startIconDrawable="@drawable/ic_lock_small"
+                    app:startIconTint="@color/ink_muted">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/capturedPayeeText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:clickable="false"
+                        android:cursorVisible="false"
+                        android:focusable="false"
+                        android:inputType="none"
+                        android:textColor="@color/ink" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/nameLayout"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

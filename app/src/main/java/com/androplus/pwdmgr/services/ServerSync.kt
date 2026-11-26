@@ -31,7 +31,7 @@ object ServerSync {
                 .also { store = it }
         }
 
-    fun isEnabled(context: Context): Boolean =
+    fun isEnabled(context: Context): Boolean = com.androplus.pwdmgr.BuildConfig.SERVER_SYNC &&
         PreferenceManager.getDefaultSharedPreferences(context).getBoolean(PREF_ENABLED, false)
 
     /** Queue a message if sync is on and it passes the privacy filter; then upload. */

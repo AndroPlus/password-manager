@@ -132,15 +132,43 @@ class NewPayeeSheet : BottomSheetDialogFragment() {
 
     private fun pickAny() {
         val names = RealmService.getInstance().getAllCategories().map { it.name }.filter { it != "Income" }
+        val items = listOf("+ New category…") + names
         AlertDialog.Builder(requireContext())
             .setTitle("Pick a category")
-            .setItems(names.toTypedArray()) { _, which ->
-                val name = names[which]
-                if (name !in choices) {
-                    if (choices.size >= 5) choices[choices.lastIndex] = name else choices.add(name)
+            .setItems(items.toTypedArray()) { _, which ->
+                if (which == 0) { newCategory(); return@setItems }
+                useChoice(names[which - 1])
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun useChoice(name: String) {
+        if (name !in choices) {
+            if (choices.size >= 5) choices[choices.lastIndex] = name else choices.add(name)
+        }
+        selected = name
+        renderChoices()
+    }
+
+    private fun newCategory() {
+        val ctx = requireContext()
+        val input = android.widget.EditText(ctx).apply {
+            hint = "e.g. Tea & Snacks"
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_CAP_WORDS
+        }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = android.widget.FrameLayout(ctx).apply { setPadding(pad, pad / 2, pad, 0); addView(input) }
+        AlertDialog.Builder(ctx)
+            .setTitle("New category")
+            .setView(box)
+            .setPositiveButton("Add") { _, _ ->
+                val typed = input.text.toString()
+                lifecycleScope.launch {
+                    val name = com.androplus.pwdmgr.services.Categories.ensure(ctx.applicationContext, typed)
+                        ?: return@launch
+                    if (_binding != null) useChoice(name)
                 }
-                selected = name
-                renderChoices()
             }
             .setNegativeButton("Cancel", null)
             .show()

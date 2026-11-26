@@ -86,9 +86,37 @@ class TransactionParserTest {
         assertEquals("ATM Withdrawal", t.merchant)
     }
 
-    @Test fun phoneNumberHandleIsNotShownAsMerchant() {
+    private fun hdfcCard(at: String) = "Txn Rs.15.00\nOn HDFC Bank Card 1234\nAt $at \nby UPI 100000000003\n" +
+        "On 26-11\nNot You?\nCall 18002586161/SMS BLOCK CC 1234 to 7308080808"
+
+    @Test fun hdfcCardAlertWithCapitalAtKeepsTheShopName() {
+        assertEquals("SRI GANESH STORES", sms(hdfcCard("SRI GANESH STORES")).merchant)
+        assertEquals("AMAZON", sms(hdfcCard("AMAZON")).merchant)
+    }
+
+    @Test fun payeeNotGivenIsGenericSoItIsNeverLearned() {
+        for (at in listOf("NA", "N/A", "N.A.", "null", "-", "NOT AVAILABLE", "Unknown")) {
+            val t = sms(hdfcCard(at))
+            assertEquals(at, 15.0, t.amount, 0.001)
+            assertEquals(at, "UPI payment", t.merchant)
+            assertEquals(at, null, CategoryMemory.key("[SMS] ${t.merchant}", true))
+        }
+    }
+
+    @Test fun digitsOnlyHandleKeepsTheWholeUpiIdAsPayee() {
         val t = sms("Rs 100 debited from a/c XX1234 to VPA 9876543210@ybl UPI")
-        assertEquals("UPI transfer", t.merchant)
+        assertEquals("9876543210@ybl", t.merchant)
+    }
+
+    @Test fun hdfcCardUpiToNumericHandleHasAPayee() {
+        // Fictional card / reference numbers.
+        val t = sms("Txn Rs.60.00\nOn HDFC Bank Card 1234\nAt *4321@ybl \nby UPI 100000000002\nOn 19-11\n" +
+            "Not You?\nCall 18002586161/SMS BLOCK CC 1234 to 7308080808")
+        assertEquals(60.0, t.amount, 0.001)
+        assertEquals(true, t.isExpense)
+        assertEquals("4321@ybl", t.merchant)
+        // A real payee, so it gets the new-payee prompt and can be named.
+        assertEquals("out:4321@ybl", CategoryMemory.key("[SMS] ${t.merchant}", true))
     }
 
     // ---- messages that must be ignored --------------------------------------

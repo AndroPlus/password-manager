@@ -50,24 +50,117 @@ class SettingsFragment : PreferenceFragmentCompat() {
 
     companion object {
         private const val REQUEST_READ_SMS = 102
+        private const val REQUEST_NOTIFICATIONS = 103
     }
 
     override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
         setPreferencesFromResource(R.xml.preferences, rootKey)
         setupServerSyncPreferences()
+        // Expense Tracker app: no server upload and no password export (those belong
+        // to the FinIntel server and the Password Manager).
+        if (!com.androplus.pwdmgr.BuildConfig.SERVER_SYNC) {
+            findPreference<Preference>("category_server_sync")?.isVisible = false
+        }
+        if (com.androplus.pwdmgr.BuildConfig.EXPENSE_ONLY) {
+            findPreference<Preference>("category_general")?.isVisible = false
+        }
         findPreference<EditTextPreference>("prompt_min_amount")?.apply {
             setOnBindEditTextListener { it.inputType = InputType.TYPE_CLASS_NUMBER }
             summaryProvider = Preference.SummaryProvider<EditTextPreference> { p ->
-                "₹" + (p.text?.takeIf { it.isNotBlank() } ?: "200")
+                "₹" + (p.text?.takeIf { it.isNotBlank() } ?: "0") + " (0 = every new payee)"
             }
         }
     }
 
+    // Backups: pick a new file (Google Drive or any folder) or an existing one to restore.
+    private var pendingPassword: String? = null
+    private val createBackupFile = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/octet-stream")
+    ) { uri ->
+        val password = pendingPassword
+        pendingPassword = null
+        if (uri == null || password == null) return@registerForActivityResult
+        com.androplus.pwdmgr.services.CloudBackup.setLocation(requireContext(), uri, password)
+        BackupUi.backupNow(this) { updateBackupSummary() }
+    }
+    private val openBackupFile = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) BackupUi.restoreFrom(this, uri) { updateBackupSummary() } }
+
+    private fun chooseBackupLocation() {
+        BackupUi.askNewPassword(this) { password ->
+            pendingPassword = password
+            Toast.makeText(context, "Pick Google Drive (☰ menu) or a folder", Toast.LENGTH_LONG).show()
+            createBackupFile.launch(com.androplus.pwdmgr.services.CloudBackup.DEFAULT_FILE_NAME)
+        }
+    }
+
+    /** No backup file yet, or access to it was lost (e.g. after a reinstall): explain, then pick it. */
+    private fun askToPickBackupFile() {
+        val ctx = requireContext()
+        if (com.androplus.pwdmgr.services.CloudBackup.location(ctx) == null) {
+            chooseBackupLocation()
+            return
+        }
+        AlertDialog.Builder(ctx)
+            .setTitle("Choose the backup file again")
+            .setMessage(com.androplus.pwdmgr.services.CloudBackup.LOST_ACCESS.substringBefore(" Tap") +
+                "\n\nPick where to keep backups (Google Drive recommended) and set a password.")
+            .setPositiveButton("Choose") { _, _ -> chooseBackupLocation() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun updateBackupSummary() {
+        if (!isAdded) return
+        val ctx = requireContext()
+        val set = com.androplus.pwdmgr.services.CloudBackup.location(ctx) != null
+        findPreference<Preference>("backup_location")?.summary = BackupUi.status(ctx)
+        findPreference<Preference>("backup_now")?.isEnabled = set
+        findPreference<Preference>("backup_auto")?.isEnabled = set
+        findPreference<Preference>("backup_change")?.isVisible = set
+    }
+
     override fun onResume() {
         super.onResume()
+        updateBackupSummary()
         updateSyncSummary()
         updateNotificationStatus()
+        updatePromptStatus()
     }
+
+    private fun updatePromptStatus() {
+        val ctx = requireContext()
+        val min = com.androplus.pwdmgr.services.AppPrefs.promptMinAmount(ctx).toLong()
+        findPreference<Preference>("test_category_prompt")?.summary =
+            com.androplus.pwdmgr.services.CategoryPrompt.blockedReason(ctx)
+                ?: (if (min <= 0) "Working: every new payee pops up a notification. Tap to send a test."
+                else "Working: new payees paid ₹$min or more pop up; smaller ones wait on Home. Tap to send a test.")
+    }
+
+    private fun checkCategoryPrompt() {
+        val ctx = requireContext()
+        val reason = com.androplus.pwdmgr.services.CategoryPrompt.blockedReason(ctx)
+        when {
+            reason == null -> {
+                com.androplus.pwdmgr.services.CategoryPrompt.sendTest(ctx)
+                Toast.makeText(ctx, "Test notification sent", Toast.LENGTH_SHORT).show()
+            }
+            reason.startsWith("Turned off") -> Toast.makeText(ctx, reason, Toast.LENGTH_LONG).show()
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED && !askedNotificationPermission -> {
+                askedNotificationPermission = true
+                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), REQUEST_NOTIFICATIONS)
+            }
+            else -> startActivity(
+                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    .putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+            )
+        }
+    }
+
+    private var askedNotificationPermission = false
 
     private fun updateNotificationStatus() {
         val ctx = requireContext()
@@ -260,6 +353,34 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 )
                 return true
             }
+            "backup_location" -> {
+                val backup = com.androplus.pwdmgr.services.CloudBackup
+                if (backup.location(requireContext()) == null || !backup.hasAccess(requireContext())) askToPickBackupFile()
+                else BackupUi.backupNow(this) { updateBackupSummary() }
+                return true
+            }
+            "backup_now" -> {
+                val backup = com.androplus.pwdmgr.services.CloudBackup
+                if (!backup.hasAccess(requireContext())) askToPickBackupFile()
+                else BackupUi.backupNow(this) { updateBackupSummary() }
+                return true
+            }
+            "backup_auto" -> {
+                com.androplus.pwdmgr.services.CloudBackup.schedule(requireContext())
+                return true
+            }
+            "backup_restore" -> {
+                openBackupFile.launch(arrayOf("*/*"))
+                return true
+            }
+            "backup_change" -> {
+                chooseBackupLocation()
+                return true
+            }
+            "test_category_prompt" -> {
+                checkCategoryPrompt()
+                return true
+            }
             "recheck_categories" -> {
                 recheckCategories()
                 return true
@@ -353,6 +474,12 @@ class SettingsFragment : PreferenceFragmentCompat() {
         permissions: Array<out String>,
         grantResults: IntArray
     ) {
+        if (requestCode == REQUEST_NOTIFICATIONS) {
+            updatePromptStatus()
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) checkCategoryPrompt()
+            else Toast.makeText(context, "Without notifications, new payees only show on Home.", Toast.LENGTH_LONG).show()
+            return
+        }
         if (requestCode == REQUEST_READ_SMS) {
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
                 chooseImportPeriod()
