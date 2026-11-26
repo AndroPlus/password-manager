@@ -146,6 +146,7 @@
             app:itemIconTint="@color/nav_item_color"
             app:itemTextColor="@color/nav_item_color"
             app:labelVisibilityMode="labeled"
+            app:paddingBottomSystemWindowInsets="false"
             app:menu="@menu/expense_nav_menu" />
     </LinearLayout>
 

@@ -14,6 +14,13 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 object ExpenseTabs {
 
     fun setup(fragment: Fragment, nav: BottomNavigationView, current: Int) {
+        // The screen already stops above the Android navigation buttons (MainActivity pads for them).
+        // The bar must not add that space again: replace its own inset handling with nothing.
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(nav) { v, insets ->
+            v.setPadding(v.paddingLeft, v.paddingTop, v.paddingRight, 0)
+            insets
+        }
+        nav.requestApplyInsets()
         nav.setOnItemSelectedListener(null)
         nav.selectedItemId = current
         nav.setOnItemSelectedListener { item ->
