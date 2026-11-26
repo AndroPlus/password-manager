@@ -48,14 +48,26 @@ object CloudBackup {
     fun lastError(c: Context): String? = prefs(c).getString(KEY_LAST_ERROR, null)
     fun isAuto(c: Context): Boolean = prefs(c).getBoolean(KEY_AUTO, true)
 
-    /** The file name and its app (e.g. "Drive") as the picker reports it. */
+    /** The file name as the picker reports it; a plain label when it can't be read. */
     fun locationName(c: Context): String? = location(c)?.let { uri ->
         runCatching {
             c.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use {
                 if (it.moveToFirst()) it.getString(0) else null
             }
-        }.getOrNull() ?: uri.lastPathSegment
+        }.getOrNull() ?: "Backup file"
     }
+
+    /**
+     * Android ties access to a picked file to this installation, so after a reinstall
+     * (or restoring the app's data by other means) the saved location is still there
+     * but can no longer be written. The user then has to pick it again.
+     */
+    fun hasAccess(c: Context): Boolean = location(c)?.let { uri ->
+        c.contentResolver.persistedUriPermissions.any { it.uri == uri && it.isWritePermission }
+    } ?: false
+
+    const val LOST_ACCESS = "Lost access to the backup file (this happens after reinstalling). " +
+        "Tap \"Change backup location or password\" and pick it again."
 
     /** Remembers the picked file (keeping access across restarts) and the password, then backs up. */
     fun setLocation(c: Context, uri: Uri, password: String) {
@@ -105,6 +117,10 @@ object CloudBackup {
     fun backupNow(c: Context): String? {
         val uri = location(c) ?: return "Choose where to keep backups first."
         val password = prefs(c).getString(KEY_PASSWORD, null) ?: return "Set a backup password first."
+        if (!hasAccess(c)) {
+            prefs(c).edit().putString(KEY_LAST_ERROR, LOST_ACCESS).apply()
+            return LOST_ACCESS
+        }
         val error = runCatching {
             val bytes = BackupCrypto.encrypt(collect(c), password)
             c.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }

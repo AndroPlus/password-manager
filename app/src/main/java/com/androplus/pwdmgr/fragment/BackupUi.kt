@@ -111,6 +111,8 @@ object BackupUi {
 
     fun status(ctx: Context): String {
         val name = CloudBackup.locationName(ctx) ?: return "Not set up. Tap to choose where to keep backups (Google Drive recommended)."
+        // Saved location but no permission to write it (after a reinstall): say so, don't wait for a failed backup.
+        if (!CloudBackup.hasAccess(ctx)) return "$name · ${CloudBackup.LOST_ACCESS}"
         val last = CloudBackup.lastBackup(ctx)
         val error = CloudBackup.lastError(ctx)
         return "$name · " + when {

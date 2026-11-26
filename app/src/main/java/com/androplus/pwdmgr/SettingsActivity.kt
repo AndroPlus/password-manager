@@ -1,10 +1,8 @@
 package com.androplus.pwdmgr
 
-
 import android.os.Bundle
-import android.view.View
+import com.google.android.material.appbar.MaterialToolbar
 import androidx.appcompat.app.AppCompatActivity
-import androidx.fragment.app.FragmentTransaction
 import com.androplus.pwdmgr.fragment.SettingsFragment
 
 class SettingsActivity : AppCompatActivity() {
@@ -12,21 +10,14 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
 
-        // below line is to change
-        // the title of our action bar.
-        supportActionBar?.setTitle("Settings")
+        // The app theme has no action bar, so the screen carries its own title and back arrow.
+        findViewById<MaterialToolbar>(R.id.settingsToolbar).setNavigationOnClickListener { finish() }
 
-        // below line is used to check if
-        // frame layout is empty or not.
-        // below line is used to check if
-        // frame layout is empty or not.
-        if (findViewById<View?>(R.id.idFrameLayout) != null) {
-            if (savedInstanceState != null) {
-                return
-            }
-            // below line is to inflate our fragment.
-            val fragmentTransaction: FragmentTransaction = supportFragmentManager.beginTransaction()
-            fragmentTransaction.add(R.id.idFrameLayout, SettingsFragment()).commit()
+        // Only add the fragment the first time; after a rotation Android restores it.
+        if (savedInstanceState == null) {
+            supportFragmentManager.beginTransaction()
+                .add(R.id.idFrameLayout, SettingsFragment())
+                .commit()
         }
     }
 }

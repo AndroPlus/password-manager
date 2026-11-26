@@ -95,6 +95,22 @@ class SettingsFragment : PreferenceFragmentCompat() {
         }
     }
 
+    /** No backup file yet, or access to it was lost (e.g. after a reinstall): explain, then pick it. */
+    private fun askToPickBackupFile() {
+        val ctx = requireContext()
+        if (com.androplus.pwdmgr.services.CloudBackup.location(ctx) == null) {
+            chooseBackupLocation()
+            return
+        }
+        AlertDialog.Builder(ctx)
+            .setTitle("Choose the backup file again")
+            .setMessage(com.androplus.pwdmgr.services.CloudBackup.LOST_ACCESS.substringBefore(" Tap") +
+                "\n\nPick where to keep backups (Google Drive recommended) and set a password.")
+            .setPositiveButton("Choose") { _, _ -> chooseBackupLocation() }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
     private fun updateBackupSummary() {
         if (!isAdded) return
         val ctx = requireContext()
@@ -338,12 +354,15 @@ class SettingsFragment : PreferenceFragmentCompat() {
                 return true
             }
             "backup_location" -> {
-                if (com.androplus.pwdmgr.services.CloudBackup.location(requireContext()) == null) chooseBackupLocation()
+                val backup = com.androplus.pwdmgr.services.CloudBackup
+                if (backup.location(requireContext()) == null || !backup.hasAccess(requireContext())) askToPickBackupFile()
                 else BackupUi.backupNow(this) { updateBackupSummary() }
                 return true
             }
             "backup_now" -> {
-                BackupUi.backupNow(this) { updateBackupSummary() }
+                val backup = com.androplus.pwdmgr.services.CloudBackup
+                if (!backup.hasAccess(requireContext())) askToPickBackupFile()
+                else BackupUi.backupNow(this) { updateBackupSummary() }
                 return true
             }
             "backup_auto" -> {
